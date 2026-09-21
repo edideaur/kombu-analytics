@@ -148,8 +148,6 @@ jobs:
           - target: armv5te-unknown-linux-musleabi
           - target: armv7-unknown-linux-gnueabi
           - target: armv7-unknown-linux-musleabi
-          - target: i586-unknown-linux-gnu
-          - target: i586-unknown-linux-musl
           - target: powerpc-unknown-linux-gnu
           - target: powerpc64-unknown-linux-gnu
           - target: powerpc64le-unknown-linux-gnu

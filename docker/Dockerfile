@@ -1,7 +1,7 @@
 FROM node:22-slim AS webui
 WORKDIR /app/webui
 COPY webui/package.json webui/package-lock.json ./
-RUN npm ci || npm install
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 COPY webui ./
 RUN npm run build
 
