@@ -6,6 +6,7 @@ COPY webui ./
 RUN npm run build
 
 FROM rust:1.97.1-slim AS builder
+RUN apt-get update && apt-get install -y build-essential make gcc g++ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY Cargo.toml Cargo.lock rust-toolchain.toml deny.toml kani.toml ./
 COPY crates ./crates
