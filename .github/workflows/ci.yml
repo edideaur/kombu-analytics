@@ -16,6 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Toolchain with Retries
+        run: |
+          for i in 1 2 3 4 5; do
+            rustup toolchain install 1.97.1 --profile minimal --component clippy,rustfmt --no-self-update && break || sleep 3
+          done
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.97.1
@@ -54,6 +59,11 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+      - name: Install Toolchain with Retries
+        run: |
+          for i in 1 2 3 4 5; do
+            rustup toolchain install 1.97.1 --profile minimal --no-self-update && break || sleep 3
+          done
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.97.1
@@ -72,6 +82,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Toolchain with Retries
+        run: |
+          for i in 1 2 3 4 5; do
+            rustup toolchain install 1.97.1 --profile minimal --no-self-update && break || sleep 3
+          done
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.97.1
@@ -94,6 +109,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install Toolchain with Retries
+        run: |
+          for i in 1 2 3 4 5; do
+            rustup toolchain install 1.97.1 --profile minimal --no-self-update && break || sleep 3
+          done
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.97.1
