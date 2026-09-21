@@ -13,7 +13,7 @@ env:
 jobs:
   check-and-lint:
     name: Check & Clippy
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
       - name: Install Toolchain with Retries
@@ -42,7 +42,7 @@ jobs:
 
   test:
     name: Workspace Tests & Database Integration
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     services:
       postgres:
         image: postgres:16-alpine
@@ -79,7 +79,7 @@ jobs:
 
   formal-verification:
     name: Kani Mathematical Verification
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
       - name: Install Toolchain with Retries
@@ -101,14 +101,49 @@ jobs:
       - name: Verify kombu-api
         run: cargo kani -p kombu-api --output-format terse
 
-  build:
-    name: Build Release Binary & Frontend SPA
-    runs-on: ubuntu-latest
+  build-frontend:
+    name: Build Frontend SPA
+    runs-on: blacksmith-32vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Build Frontend SPA
+        working-directory: webui
+        run: |
+          npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+          ln -sfn ../webui/node_modules ../umami/node_modules || true
+          npm run build
+      - name: Upload Frontend Dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: webui/dist
+
+  build-binaries:
+    name: Build Binary (${{ matrix.target }})
+    needs: build-frontend
+    runs-on: blacksmith-32vcpu-ubuntu-2404
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-musl
+          - target: i686-unknown-linux-gnu
+          - target: i686-unknown-linux-musl
+          - target: aarch64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-musl
+          - target: armv7-unknown-linux-gnueabihf
+          - target: armv7-unknown-linux-musleabihf
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Frontend Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: webui/dist
       - name: Install Toolchain with Retries
         run: |
           for i in 1 2 3 4 5; do
@@ -117,11 +152,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.97.1
-      - name: Build Frontend SPA
-        working-directory: webui
+          targets: ${{ matrix.target }}
+      - name: Install Cross
         run: |
-          npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-          ln -sfn ../webui/node_modules ../umami/node_modules || true
-          npm run build
-      - name: Build Release Binary
-        run: cargo build --release
+          curl -fsSL https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-musl.tar.gz | sudo tar -xz -C /usr/local/bin
+      - name: Build Binary
+        run: cross build --release --target ${{ matrix.target }} --bin kombu
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kombu-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/kombu
+          if-no-files-found: error

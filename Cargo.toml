@@ -39,7 +39,7 @@ tikv-jemallocator = "0.6"
 base64 = "0.22"
 totp-rs = { version = "6.0", features = ["gen_secret", "otpauth", "qr"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
-sentry = "0.42.0"
+sentry = { version = "0.42.0", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"] }
 
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
