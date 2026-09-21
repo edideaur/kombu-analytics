@@ -336,12 +336,32 @@ jobs:
       - check-and-lint
       - test
       - formal-verification
+      - build-frontend
+      - build-linux-binaries
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Download Frontend Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: webui/dist
+      - name: Download x86_64 Linux Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: kombu-x86_64-unknown-linux-musl
+          path: bin/amd64
+      - name: Download ARM64 Linux Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: kombu-aarch64-unknown-linux-musl
+          path: bin/arm64
+      - name: Prepare Binaries
+        run: |
+          chmod +x bin/amd64/kombu bin/arm64/kombu docker/entrypoint.sh
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -364,7 +384,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/Dockerfile
+          file: docker/Dockerfile.package
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
