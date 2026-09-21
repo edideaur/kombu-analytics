@@ -144,10 +144,19 @@ jobs:
           - target: arm-unknown-linux-musleabihf
           - target: riscv64gc-unknown-linux-gnu
           - target: arm-unknown-linux-musleabi
+          - target: arm-unknown-linux-gnueabi
+          - target: armv5te-unknown-linux-musleabi
+          - target: armv7-unknown-linux-gnueabi
+          - target: armv7-unknown-linux-musleabi
+          - target: i586-unknown-linux-gnu
+          - target: i586-unknown-linux-musl
+          - target: powerpc-unknown-linux-gnu
+          - target: powerpc64-unknown-linux-gnu
           - target: powerpc64le-unknown-linux-gnu
           - target: s390x-unknown-linux-gnu
           - target: x86_64-unknown-freebsd
           - target: i686-unknown-freebsd
+          - target: x86_64-unknown-illumos
           - target: x86_64-pc-windows-gnu
           - target: i686-pc-windows-gnu
     steps:
