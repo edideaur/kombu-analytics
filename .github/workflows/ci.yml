@@ -106,7 +106,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Download Node 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Build Frontend SPA
@@ -121,8 +122,8 @@ jobs:
           name: frontend-dist
           path: webui/dist
 
-  build-binaries:
-    name: Build Binary (${{ matrix.target }})
+  build-linux-binaries:
+    name: Build Linux Binary (${{ matrix.target }})
     needs: build-frontend
     runs-on: ubuntu-latest
     strategy:
@@ -163,4 +164,96 @@ jobs:
         with:
           name: kombu-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/kombu
+          if-no-files-found: error
+
+  build-macos-binaries:
+    name: Build macOS Binaries (Intel, Apple Silicon, Lipo)
+    needs: build-frontend
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Frontend Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: webui/dist
+      - name: Install Toolchain with Retries
+        run: |
+          for i in 1 2 3 4 5; do
+            rustup toolchain install 1.97.1 --profile minimal --target x86_64-apple-darwin --target aarch64-apple-darwin --no-self-update && break || sleep 3
+          done
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
+      - name: Build Intel Binary
+        run: cargo build --release --target x86_64-apple-darwin --bin kombu
+      - name: Build Apple Silicon Binary
+        run: cargo build --release --target aarch64-apple-darwin --bin kombu
+      - name: Create Universal Binary with Lipo
+        run: |
+          mkdir -p target/universal-apple-darwin/release
+          lipo -create -output target/universal-apple-darwin/release/kombu target/x86_64-apple-darwin/release/kombu target/aarch64-apple-darwin/release/kombu
+          lipo -info target/universal-apple-darwin/release/kombu
+      - name: Upload Intel Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kombu-x86_64-apple-darwin
+          path: target/x86_64-apple-darwin/release/kombu
+          if-no-files-found: error
+      - name: Upload Apple Silicon Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kombu-aarch64-apple-darwin
+          path: target/aarch64-apple-darwin/release/kombu
+          if-no-files-found: error
+      - name: Upload Universal Lipo Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kombu-universal-apple-darwin
+          path: target/universal-apple-darwin/release/kombu
+          if-no-files-found: error
+
+  build-windows-binaries:
+    name: Build Windows Binary (${{ matrix.target }})
+    needs: build-frontend
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            arch: x64
+          - target: i686-pc-windows-msvc
+            arch: x86
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Frontend Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: webui/dist
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+      - name: Install Toolchain with Retries
+        run: |
+          for i in 1 2 3 4 5; do
+            rustup toolchain install 1.97.1 --profile minimal --target ${{ matrix.target }} --no-self-update && break || sleep 3
+          done
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+          targets: ${{ matrix.target }}
+      - name: Build Binary
+        run: cargo build --release --target ${{ matrix.target }} --bin kombu
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kombu-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/kombu.exe
           if-no-files-found: error
