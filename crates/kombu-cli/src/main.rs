@@ -185,6 +185,14 @@ pub async fn run_serve_internal(
 }
 
 pub async fn run_cli_with_shutdown(cli: Cli, shutdown: BoxFuture) -> anyhow::Result<()> {
+    run_cli_internal(cli, shutdown, std::env::var("DATABASE_URL").ok()).await
+}
+
+pub async fn run_cli_internal(
+    cli: Cli,
+    shutdown: BoxFuture,
+    env_db_url: Option<String>,
+) -> anyhow::Result<()> {
     match cli.command {
         Commands::Serve {
             listen,
@@ -198,7 +206,7 @@ pub async fn run_cli_with_shutdown(cli: Cli, shutdown: BoxFuture) -> anyhow::Res
             engine,
             clickhouse_url,
         } => {
-            let url = resolve_migrate_url(database_url, std::env::var("DATABASE_URL").ok())?;
+            let url = resolve_migrate_url(database_url, env_db_url)?;
             if let Ok(pool) = sqlx::postgres::PgPoolOptions::new()
                 .acquire_timeout(std::time::Duration::from_secs(10))
                 .connect(&url)
@@ -247,7 +255,7 @@ pub async fn run_cli_with_shutdown(cli: Cli, shutdown: BoxFuture) -> anyhow::Res
             website_id,
             database_url,
         } => {
-            let url = resolve_migrate_url(database_url, std::env::var("DATABASE_URL").ok())?;
+            let url = resolve_migrate_url(database_url, env_db_url)?;
             let pool = match sqlx::postgres::PgPoolOptions::new()
                 .acquire_timeout(std::time::Duration::from_secs(5))
                 .connect(&url)
@@ -270,7 +278,7 @@ pub async fn run_cli_with_shutdown(cli: Cli, shutdown: BoxFuture) -> anyhow::Res
             file,
             database_url,
         } => {
-            let url = resolve_migrate_url(database_url, std::env::var("DATABASE_URL").ok())?;
+            let url = resolve_migrate_url(database_url, env_db_url)?;
             let pool = match sqlx::postgres::PgPoolOptions::new()
                 .acquire_timeout(std::time::Duration::from_secs(5))
                 .connect(&url)
@@ -614,7 +622,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_migrate_no_url_error() {
-        let res = run_cli_with_shutdown(
+        let res = run_cli_internal(
             Cli {
                 command: Commands::Migrate {
                     database_url: None,
@@ -623,6 +631,7 @@ mod tests {
                 },
             },
             Box::pin(std::future::ready(())),
+            None,
         )
         .await;
         assert!(res.is_err());
@@ -646,7 +655,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_rollup_no_url_error() {
-        let res = run_cli_with_shutdown(
+        let res = run_cli_internal(
             Cli {
                 command: Commands::Rollup {
                     website_id: Uuid::now_v7(),
@@ -654,6 +663,7 @@ mod tests {
                 },
             },
             Box::pin(std::future::ready(())),
+            None,
         )
         .await;
         assert!(res.is_err());
