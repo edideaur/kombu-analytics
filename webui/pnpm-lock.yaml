@@ -65,6 +65,9 @@ importers:
       papaparse:
         specifier: ^5.7.0
         version: 5.7.0
+      prop-types:
+        specifier: ^15.8.1
+        version: 15.8.1
       punycode:
         specifier: ^2.3.1
         version: 2.3.1
