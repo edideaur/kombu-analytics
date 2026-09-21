@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.97.1
@@ -101,6 +101,7 @@ jobs:
         working-directory: webui
         run: |
           npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+          ln -sfn ../webui/node_modules ../umami/node_modules || true
           npm run build
       - name: Build Release Binary
         run: cargo build --release
