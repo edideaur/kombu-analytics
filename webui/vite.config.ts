@@ -1,22 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import fs from 'node:fs';
 import path from 'node:path';
-
-const umamiNodeModules = path.resolve(__dirname, '../umami/node_modules');
-const webuiNodeModules = path.resolve(__dirname, 'node_modules');
-if (!fs.existsSync(umamiNodeModules) && fs.existsSync(webuiNodeModules)) {
-  try {
-    fs.symlinkSync('../webui/node_modules', umamiNodeModules, 'junction');
-  } catch (_e) {
-  }
-}
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '../umami/src'),
+      '@': path.resolve(__dirname, 'src'),
       'next/navigation': path.resolve(__dirname, 'src/shims/next-navigation.ts'),
       'next/link': path.resolve(__dirname, 'src/shims/next-link.tsx'),
       'next/script': path.resolve(__dirname, 'src/shims/next-script.tsx'),
@@ -26,7 +16,7 @@ export default defineConfig({
   css: {
     postcss: path.resolve(__dirname, './postcss.config.js'),
   },
-  publicDir: path.resolve(__dirname, '../umami/public'),
+  publicDir: path.resolve(__dirname, 'public'),
   build: {
     outDir: 'dist',
     emptyOutDir: true,

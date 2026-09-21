@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { BrowserRouter } from 'react-router';
 import { useEffect } from 'react';
 import '@umami/react-zen/styles.full.css';
-import '../../umami/src/app/global.css';
+import './app/global.css';
 import '@fontsource/inter/300.css';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';

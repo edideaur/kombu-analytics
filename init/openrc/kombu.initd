@@ -1,0 +1,28 @@
+#!/sbin/openrc-run
+
+name="kombu"
+description="Kombu Analytics Server"
+command="/usr/local/bin/kombu"
+command_args="serve --listen ${LISTEN:-0.0.0.0:3000}"
+command_user="${KOMBU_USER:-kombu}:${KOMBU_GROUP:-kombu}"
+supervisor="supervise-daemon"
+respawn_delay=3
+respawn_max=0
+
+depend() {
+  need net
+  after postgresql
+}
+
+start_pre() {
+  if [ -n "$DATABASE_URL" ]; then
+    export DATABASE_URL
+  fi
+  if [ -n "$APP_SECRET" ]; then
+    export APP_SECRET
+  fi
+}
+
+healthcheck() {
+  curl -sf "http://${LISTEN:-127.0.0.1:3000}/api/health" >/dev/null 2>&1
+}

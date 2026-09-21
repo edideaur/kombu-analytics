@@ -8,7 +8,7 @@
     "skipLibCheck": true,
     "types": ["vite/client"],
     "paths": {
-      "@/*": ["../umami/src/*"],
+      "@/*": ["./src/*"],
       "next/navigation": ["./src/shims/next-navigation.ts"],
       "next/link": ["./src/shims/next-link.tsx"],
       "next/script": ["./src/shims/next-script.tsx"],

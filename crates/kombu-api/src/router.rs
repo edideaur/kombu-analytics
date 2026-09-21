@@ -515,7 +515,7 @@ async fn security_headers_middleware(
 }
 
 async fn tracker_script() -> impl IntoResponse {
-    let script = include_str!("../../../umami/public/script.js");
+    let script = include_str!("../../../webui/public/script.js");
     (
         [
             (
@@ -545,12 +545,12 @@ async fn telemetry_script() -> impl IntoResponse {
             ),
             (axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"),
         ],
-        "/* telemetry disabled */",
+        "console.log('telemetry disabled');",
     )
 }
 
 async fn recorder_script() -> impl IntoResponse {
-    let script = include_str!("../../../umami/public/recorder.js");
+    let script = include_str!("../../../webui/public/recorder.js");
     (
         [
             (

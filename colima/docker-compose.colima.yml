@@ -1,0 +1,41 @@
+services:
+  kombu:
+    image: ghcr.io/edideaur/kombu-analytics:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://kombu:kombu@postgres:5432/kombu
+      APP_SECRET: default_secret_change_me_in_production
+      STORAGE_ENGINE: postgres
+      LISTEN: 0.0.0.0:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: kombu
+      POSTGRES_PASSWORD: kombu
+      POSTGRES_DB: kombu
+    volumes:
+      - kombu_colima_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kombu -d kombu"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  kombu_colima_pgdata:

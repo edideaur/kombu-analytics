@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "kombu exited with status $1, signal $2, respawning in 3 seconds..."
+sleep 3

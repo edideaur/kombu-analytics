@@ -1,0 +1,28 @@
+#!/bin/sh
+
+. /etc/rc.subr
+
+name=kombu
+rcvar=kombu_enable
+
+load_rc_config $name
+
+: ${kombu_enable:=NO}
+: ${kombu_user:=kombu}
+: ${kombu_listen:=0.0.0.0:3000}
+: ${kombu_envfile:=/usr/local/etc/kombu.env}
+
+command="/usr/local/bin/kombu"
+command_args="serve --listen ${kombu_listen} &"
+
+start_precmd="kombu_prestart"
+
+kombu_prestart() {
+  if [ -f "${kombu_envfile}" ]; then
+    set -a
+    . "${kombu_envfile}"
+    set +a
+  fi
+}
+
+run_rc_command "$1"

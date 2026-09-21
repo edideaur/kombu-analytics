@@ -1,0 +1,13 @@
+cpu: 4
+memory: 8
+disk: 60
+arch: host
+runtime: docker
+vmType: vz
+mountType: virtiofs
+network:
+  address: true
+  dns: []
+  routes: []
+mounts: []
+env: {}

@@ -1,0 +1,8 @@
+#!/bin/sh
+exec 2>&1
+if [ -f /etc/kombu/kombu.env ]; then
+  set -a
+  . /etc/kombu/kombu.env
+  set +a
+fi
+exec chpst -u kombu /usr/local/bin/kombu serve --listen "${LISTEN:-0.0.0.0:3000}"

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.kombu.analytics</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/kombu</string>
+        <string>serve</string>
+        <string>--listen</string>
+        <string>0.0.0.0:3000</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DATABASE_URL</key>
+        <string>postgres://kombu:kombu@localhost:5432/kombu</string>
+        <key>APP_SECRET</key>
+        <string>replace_with_strong_secret_key</string>
+        <key>STORAGE_ENGINE</key>
+        <string>postgres</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/var/log/kombu.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/kombu.stderr.log</string>
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+    </dict>
+</dict>
+</plist>

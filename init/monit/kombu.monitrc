@@ -1,0 +1,5 @@
+check process kombu with pidfile /var/run/kombu.pid
+    start program = "/etc/init.d/kombu start"
+    stop program = "/etc/init.d/kombu stop"
+    if failed host 127.0.0.1 port 3000 protocol http request "/api/health" with timeout 5 seconds for 3 cycles then restart
+    if 5 restarts within 5 cycles then timeout

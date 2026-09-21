@@ -1,0 +1,72 @@
+#!/bin/sh
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/local/bin/kombu
+NAME=kombu
+PIDFILE=/var/run/kombu.pid
+CONF=/etc/kombu/kombu.env
+
+test -x "$DAEMON" || exit 0
+
+if [ -f "$CONF" ]; then
+  set -a
+  . "$CONF"
+  set +a
+fi
+
+start() {
+  echo "Starting $NAME..."
+  start-stop-daemon --start --quiet --background --make-pidfile --pidfile "$PIDFILE" --exec "$DAEMON" -- serve --listen "${LISTEN:-0.0.0.0:3000}"
+}
+
+stop() {
+  echo "Stopping $NAME..."
+  start-stop-daemon --stop --quiet --oknodo --pidfile "$PIDFILE"
+  rm -f "$PIDFILE"
+}
+
+status() {
+  if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    echo "$NAME is running with PID $(cat "$PIDFILE")"
+    return 0
+  else
+    echo "$NAME is not running"
+    return 1
+  fi
+}
+
+health() {
+  if curl -sf "http://${LISTEN:-127.0.0.1:3000}/api/health" >/dev/null 2>&1; then
+    echo "$NAME health check ok"
+    return 0
+  else
+    echo "$NAME health check failed"
+    return 1
+  fi
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  restart)
+    stop
+    sleep 2
+    start
+    ;;
+  status)
+    status
+    ;;
+  health)
+    health
+    ;;
+  *)
+    echo "Usage: /etc/init.d/kombu {start|stop|restart|status|health}"
+    exit 1
+    ;;
+esac
+
+exit 0

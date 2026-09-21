@@ -1,0 +1,181 @@
+'use client';
+import { Column, Grid, Row, useTheme } from '@umami/react-zen';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { BoardViewPage } from '@/app/(main)/boards/[boardId]/BoardViewPage';
+import { LinkPage } from '@/app/(main)/links/[linkId]/LinkPage';
+import { PixelPage } from '@/app/(main)/pixels/[pixelId]/PixelPage';
+import { AttributionPage } from '@/app/(main)/websites/[websiteId]/(reports)/attribution/AttributionPage';
+import { BreakdownPage } from '@/app/(main)/websites/[websiteId]/(reports)/breakdown/BreakdownPage';
+import { FunnelsPage } from '@/app/(main)/websites/[websiteId]/(reports)/funnels/FunnelsPage';
+import { GoalsPage } from '@/app/(main)/websites/[websiteId]/(reports)/goals/GoalsPage';
+import { JourneysPage } from '@/app/(main)/websites/[websiteId]/(reports)/journeys/JourneysPage';
+import { PerformancePage } from '@/app/(main)/websites/[websiteId]/(reports)/performance/PerformancePage';
+import { RetentionPage } from '@/app/(main)/websites/[websiteId]/(reports)/retention/RetentionPage';
+import { RevenuePage } from '@/app/(main)/websites/[websiteId]/(reports)/revenue/RevenuePage';
+import { UTMPage } from '@/app/(main)/websites/[websiteId]/(reports)/utm/UTMPage';
+import { ComparePage } from '@/app/(main)/websites/[websiteId]/compare/ComparePage';
+import { EventsPage } from '@/app/(main)/websites/[websiteId]/events/EventsPage';
+import { RealtimePage } from '@/app/(main)/websites/[websiteId]/realtime/RealtimePage';
+import { SessionsPage } from '@/app/(main)/websites/[websiteId]/sessions/SessionsPage';
+import { WebsiteHeader } from '@/app/(main)/websites/[websiteId]/WebsiteHeader';
+import { WebsitePage } from '@/app/(main)/websites/[websiteId]/WebsitePage';
+import { WebsiteProvider } from '@/app/(main)/websites/WebsiteProvider';
+import { PageBody } from '@/components/common/PageBody';
+import { useLoginQuery, useShare } from '@/components/hooks';
+import { SimpleShareEditButton } from '@/components/share/SimpleShareEditButton';
+import { MobileMenuButton } from '@/components/input/MobileMenuButton';
+import { ENTITY_TYPE } from '@/lib/constants';
+import { getShareTheme } from '@/lib/share';
+import { ShareFooter } from './ShareFooter';
+import { ShareNav } from './ShareNav';
+
+const PAGE_COMPONENTS: Record<string, React.ComponentType<{ websiteId: string }>> = {
+  '': WebsitePage,
+  overview: WebsitePage,
+  events: EventsPage,
+  sessions: SessionsPage,
+  realtime: RealtimePage,
+  performance: PerformancePage,
+  compare: ComparePage,
+  breakdown: BreakdownPage,
+  goals: GoalsPage,
+  funnels: FunnelsPage,
+  journeys: JourneysPage,
+  retention: RetentionPage,
+  utm: UTMPage,
+  revenue: RevenuePage,
+  attribution: AttributionPage,
+};
+
+function getSharePath(pathname: string) {
+  const segments = pathname.split('/');
+  const firstSegment = segments[3];
+
+  // If first segment looks like a domain name, skip it
+  if (firstSegment?.includes('.')) {
+    return segments[4];
+  }
+
+  return firstSegment;
+}
+
+export function SharePage() {
+  const [navCollapsed, setNavCollapsed] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem('share:navCollapsed') === 'true',
+  );
+
+  const handleCollapse = (value: boolean) => {
+    localStorage.setItem('share:navCollapsed', String(value));
+    setNavCollapsed(value);
+  };
+  const share = useShare();
+  const { initTheme } = useTheme();
+  const router = useRouter();
+  const pathname = usePathname();
+  const path = getSharePath(pathname);
+  const { slug, websiteId, boardId, pixelId, linkId, parameters = {}, shareType } = share;
+  const shareTheme = getShareTheme(parameters);
+
+  useEffect(() => {
+    initTheme(shareTheme, 'system');
+
+    return () => {
+      initTheme(undefined, 'system');
+    };
+  }, [shareTheme, initTheme]);
+
+  // Check if the requested path is allowed
+  const pageKey = path || '';
+  const isAllowed = pageKey === '' || parameters[pageKey] === true;
+
+  const entityPage =
+    shareType === ENTITY_TYPE.board && boardId ? (
+      <BoardViewPage boardId={boardId} showActions={false} />
+    ) : shareType === ENTITY_TYPE.pixel && pixelId ? (
+      <PixelPage pixelId={pixelId} showHeaderActions={false} />
+    ) : shareType === ENTITY_TYPE.link && linkId ? (
+      <LinkPage linkId={linkId} showHeaderActions={false} />
+    ) : null;
+
+  useEffect(() => {
+    if (!isAllowed) {
+      router.replace(`/share/${slug}`);
+    }
+  }, [isAllowed, slug, router]);
+
+  const { user } = useLoginQuery();
+
+  const handleShareSave = (savedShare: any) => {
+    if (savedShare?.slug && savedShare.slug !== slug) {
+      router.replace(`/share/${savedShare.slug}`);
+    }
+  };
+
+  const adminBar = user ? (
+    <Row
+      justifyContent="space-between"
+      alignItems="center"
+      paddingX={{ base: '3', md: '6' }}
+      paddingY="2"
+      style={{
+        background: 'var(--surface-sunken)',
+        borderBottom: '1px solid var(--border-default)',
+        fontSize: '13px',
+      }}
+    >
+      <Row alignItems="center" gap="2">
+        <span style={{ color: 'var(--text-muted)' }}>Share:</span>
+        <strong style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {share.name}
+        </strong>
+        <span style={{ color: 'var(--text-muted)' }}>({`/share/${share.slug}`})</span>
+      </Row>
+      <Row alignItems="center" gap="2">
+        <SimpleShareEditButton shareId={share.shareId} onSave={handleShareSave} />
+      </Row>
+    </Row>
+  ) : null;
+
+  if (entityPage) {
+    return (
+      <Column>
+        {adminBar}
+        {entityPage}
+        <ShareFooter />
+      </Column>
+    );
+  }
+
+  if (!isAllowed) {
+    return null;
+  }
+
+  const PageComponent = PAGE_COMPONENTS[pageKey] || WebsitePage;
+
+  return (
+    <Column width="100%">
+      {adminBar}
+      <Grid columns={{ base: '1fr', lg: `${navCollapsed ? '60px' : '240px'} 1fr` }} width="100%">
+        <Row display={{ base: 'flex', lg: 'none' }} alignItems="center" gap padding="3">
+          <MobileMenuButton>
+            {({ close }) => {
+              return <ShareNav onItemClick={close} />;
+            }}
+          </MobileMenuButton>
+        </Row>
+        <Column display={{ base: 'none', lg: 'flex' }} marginRight="2">
+          <ShareNav collapsed={navCollapsed} onCollapse={handleCollapse} />
+        </Column>
+        <PageBody gap>
+          <WebsiteProvider websiteId={websiteId}>
+            <Column>
+              <WebsiteHeader showActions={false} allowLink={false} />
+              <PageComponent websiteId={websiteId} />
+            </Column>
+          </WebsiteProvider>
+        </PageBody>
+      </Grid>
+    </Column>
+  );
+}

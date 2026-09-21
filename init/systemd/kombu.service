@@ -1,0 +1,28 @@
+[Unit]
+Description=Kombu Analytics Server
+After=network.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kombu
+Group=kombu
+WorkingDirectory=/var/lib/kombu
+EnvironmentFile=-/etc/kombu/kombu.env
+ExecStart=/usr/local/bin/kombu serve --listen 0.0.0.0:3000
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=3s
+RestartMode=direct
+WatchdogSec=30s
+LimitNOFILE=65535
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kombu
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

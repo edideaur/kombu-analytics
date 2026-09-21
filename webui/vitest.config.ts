@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '../umami/src'),
+      '@': path.resolve(__dirname, 'src'),
       'next/navigation': path.resolve(__dirname, 'src/shims/next-navigation.ts'),
       'next/link': path.resolve(__dirname, 'src/shims/next-link.tsx'),
       'next/script': path.resolve(__dirname, 'src/shims/next-script.tsx'),
@@ -14,6 +14,7 @@ export default defineConfig({
     },
   },
   test: {
+    include: ['src/shims/**/*.{test,spec}.{ts,tsx}'],
     environment: 'jsdom',
     globals: true,
     coverage: {

@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ "main", "master" ]
@@ -114,7 +117,6 @@ jobs:
         working-directory: webui
         run: |
           npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-          ln -sfn ../webui/node_modules ../umami/node_modules || true
           npm run build
       - name: Upload Frontend Dist
         uses: actions/upload-artifact@v4
@@ -138,6 +140,9 @@ jobs:
           - target: aarch64-unknown-linux-musl
           - target: armv7-unknown-linux-gnueabihf
           - target: armv7-unknown-linux-musleabihf
+          - target: arm-unknown-linux-gnueabihf
+          - target: arm-unknown-linux-musleabihf
+          - target: riscv64gc-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v4
       - name: Download Frontend Artifact
@@ -226,6 +231,8 @@ jobs:
             arch: x64
           - target: i686-pc-windows-msvc
             arch: x86
+          - target: aarch64-pc-windows-msvc
+            arch: x64_arm64
     steps:
       - uses: actions/checkout@v4
       - name: Download Frontend Artifact
@@ -260,3 +267,48 @@ jobs:
           name: kombu-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/kombu.exe
           if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - check-and-lint
+      - test
+      - formal-verification
+      - build-linux-binaries
+      - build-macos-binaries
+      - build-windows-binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p release_assets
+          find artifacts -type f \( -name "kombu" -o -name "kombu.exe" \) | while read -r file; do
+            dir=$(basename "$(dirname "$file")")
+            target=${dir#kombu-}
+            if [[ "$file" == *.exe ]]; then
+              cp "$file" "release_assets/kombu-${target}.exe"
+            else
+              cp "$file" "release_assets/kombu-${target}"
+              chmod +x "release_assets/kombu-${target}"
+            fi
+          done
+          cd release_assets
+          sha256sum * > SHA256SUMS
+          ls -la
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v0.1.0-rev.${GITHUB_SHA:0:8}"
+          gh release create "$TAG" release_assets/* \
+            --target "$GITHUB_SHA" \
+            --title "Kombu Analytics $TAG" \
+            --notes "Automated release build for commit $GITHUB_SHA"
