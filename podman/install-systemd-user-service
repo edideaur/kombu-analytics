@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVICE_DIR="${HOME}/.config/systemd/user"
+
+mkdir -p "${SERVICE_DIR}"
+cp "${SCRIPT_DIR}/kombu.service" "${SERVICE_DIR}/kombu.service"
+
+systemctl --user daemon-reload
+systemctl --user enable kombu.service
+echo "Installed and enabled kombu.service user service."
+echo "Start with: systemctl --user start kombu.service"

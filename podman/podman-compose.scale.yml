@@ -1,0 +1,66 @@
+services:
+  kombu:
+    container_name: kombu
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: kombu-analytics:latest
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-kombu}:${POSTGRES_PASSWORD:-kombu}@db:5432/${POSTGRES_DB:-kombu}
+      STORAGE_ENGINE: ${STORAGE_ENGINE:-clickhouse}
+      CLICKHOUSE_URL: http://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-kombu}@clickhouse:8123/${CLICKHOUSE_DB:-kombu}
+      APP_SECRET: ${APP_SECRET:-replace-me-with-a-random-string-at-least-32-chars-long!!}
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    init: true
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db:
+    container_name: kombu-db
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kombu}
+      POSTGRES_USER: ${POSTGRES_USER:-kombu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kombu}
+    volumes:
+      - kombu-db-data:/var/lib/postgresql/data:Z
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kombu} -d ${POSTGRES_DB:-kombu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    container_name: kombu-clickhouse
+    image: docker.io/clickhouse/clickhouse-server:24-alpine
+    ports:
+      - "127.0.0.1:8123:8123"
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-kombu}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kombu}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - kombu-clickhouse-data:/var/lib/clickhouse:Z
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  kombu-db-data:
+  kombu-clickhouse-data:

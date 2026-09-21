@@ -1,0 +1,4 @@
+[kani]
+default-unwind = 1
+unwind = 1
+cbmc-args = ["--object-bits", "12"]

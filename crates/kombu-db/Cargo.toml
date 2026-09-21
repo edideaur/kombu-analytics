@@ -1,0 +1,26 @@
+[package]
+name = "kombu-db"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "DB pool + migrations ported from prisma"
+
+[dependencies]
+kombu-core = { path = "../kombu-core" }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+arc-swap = { workspace = true }
+reqwest = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+axum = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net"] }
+
+[lints]
+workspace = true

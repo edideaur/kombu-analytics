@@ -1,0 +1,33 @@
+[package]
+name = "kombu-cli"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "kombu binary: serve, migrate"
+
+[[bin]]
+name = "kombu"
+path = "src/main.rs"
+
+[dependencies]
+kombu-api = { path = "../kombu-api" }
+kombu-core = { path = "../kombu-core" }
+kombu-db = { path = "../kombu-db" }
+kombu-query = { path = "../kombu-query" }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+sqlx = { workspace = true }
+sha2 = { workspace = true }
+tikv-jemallocator = { workspace = true }
+sentry = { workspace = true }
+
+[lints]
+workspace = true

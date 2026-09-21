@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  DATABASE_URL: "postgres://kombu:kombu@localhost:5432/kombu"
+
+jobs:
+  check-and-lint:
+    name: Check & Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
+      - name: Rustfmt Check
+        run: cargo fmt --all -- --check
+      - name: Clippy Warnings Deny
+        run: cargo clippy --workspace --tests -- -D warnings
+
+  test:
+    name: Workspace Tests & Database Integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: kombu
+          POSTGRES_PASSWORD: kombu
+          POSTGRES_DB: kombu
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: target/
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      - name: Apply Migrations
+        run: cargo run -p kombu-cli --bin kombu -- migrate
+      - name: Run Cargo Test
+        run: cargo test --workspace
+
+  formal-verification:
+    name: Kani Mathematical Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Kani
+        run: cargo install --locked kani-verifier && cargo kani setup
+      - name: Verify kombu-core
+        run: cargo kani -p kombu-core --output-format terse
+      - name: Verify kombu-ingest
+        run: cargo kani -p kombu-ingest --output-format terse
+      - name: Verify kombu-query
+        run: cargo kani -p kombu-query --output-format terse
+      - name: Verify kombu-api
+        run: cargo kani -p kombu-api --output-format terse
+
+  build:
+    name: Build Release Binary & Frontend SPA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build Frontend SPA
+        working-directory: webui
+        run: |
+          npm ci || npm install
+          npm run build
+      - name: Build Release Binary
+        run: cargo build --release

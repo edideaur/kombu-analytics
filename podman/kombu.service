@@ -1,0 +1,14 @@
+[Unit]
+Description=Kombu Analytics Service (Podman)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/kombu-analytics
+ExecStart=/usr/bin/podman-compose -f podman/podman-compose.yml up
+ExecStop=/usr/bin/podman-compose -f podman/podman-compose.yml down
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

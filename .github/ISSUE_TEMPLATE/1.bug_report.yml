@@ -1,0 +1,34 @@
+name: '🐛 Bug Report'
+description: Create a bug report for Kombu Analytics.
+body:
+  - type: textarea
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Database
+      description: What database backend are you using?
+      options:
+        - PostgreSQL
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant server or client log output.
+      render: shell
+  - type: input
+    attributes:
+      label: Kombu Version or Commit Hash
+      description: 'For example: 0.1.0, main git sha, etc.'
+  - type: input
+    attributes:
+      label: Deployment Environment
+      description: 'For example: Bare-metal Linux, Docker, Podman, Kubernetes'
+  - type: input
+    attributes:
+      label: Browser / Client
+      description: 'For example: Chrome, Firefox, Safari, Edge'
