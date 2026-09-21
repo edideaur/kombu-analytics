@@ -13,7 +13,7 @@ env:
 jobs:
   check-and-lint:
     name: Check & Clippy
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install Toolchain with Retries
@@ -42,7 +42,7 @@ jobs:
 
   test:
     name: Workspace Tests & Database Integration
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:16-alpine
@@ -79,7 +79,7 @@ jobs:
 
   formal-verification:
     name: Kani Mathematical Verification
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install Toolchain with Retries
@@ -103,7 +103,7 @@ jobs:
 
   build-frontend:
     name: Build Frontend SPA
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -124,7 +124,7 @@ jobs:
   build-binaries:
     name: Build Binary (${{ matrix.target }})
     needs: build-frontend
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
