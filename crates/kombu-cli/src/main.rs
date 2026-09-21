@@ -80,7 +80,7 @@ pub fn build_app_with_dist(
         let fallback_svc = tower::service_fn(|_| async {
             use axum::response::IntoResponse;
             Ok::<_, std::convert::Infallible>(
-                axum::response::Html(include_str!("../../../webui/dist/index.html"))
+                axum::response::Html(include_str!(concat!(env!("OUT_DIR"), "/index.html")))
                     .into_response(),
             )
         });
