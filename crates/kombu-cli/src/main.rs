@@ -9,6 +9,10 @@ pub mod plausible;
 #[cfg(not(test))]
 use tracing_subscriber::EnvFilter;
 
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 

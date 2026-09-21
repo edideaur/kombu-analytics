@@ -26,8 +26,10 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 sqlx = { workspace = true }
 sha2 = { workspace = true }
-tikv-jemallocator = { workspace = true }
 sentry = { workspace = true }
+
+[target.'cfg(all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")))'.dependencies]
+tikv-jemallocator = { workspace = true }
 
 [lints]
 workspace = true
