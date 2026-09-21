@@ -420,7 +420,9 @@ mod tests {
             window_minutes: Some(15),
             enabled: Some(true),
         };
-        let res_create = create(State(state.clone()), Json(input.clone())).await.unwrap();
+        let res_create = create(State(state.clone()), Json(input.clone()))
+            .await
+            .unwrap();
         let alert_id_str = res_create.0["id"].as_str().unwrap();
         let alert_id = Uuid::parse_str(alert_id_str).unwrap();
         assert_eq!(res_create.0["name"], "Spike Alert");
@@ -428,7 +430,9 @@ mod tests {
         let res_list = list(State(state.clone())).await.unwrap();
         assert!(res_list.0["count"].as_i64().unwrap() >= 1);
 
-        let res_site_list = list_for_website(Path(website_id), State(state.clone())).await.unwrap();
+        let res_site_list = list_for_website(Path(website_id), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_site_list.0["count"], 1);
 
         let res_get = get(Path(alert_id), State(state.clone())).await.unwrap();
@@ -461,8 +465,24 @@ mod tests {
         assert!(res_test_404.is_err());
         assert_eq!(res_test_404.unwrap_err().0, StatusCode::NOT_FOUND);
 
-        let _ = send_webhook_notification("http://127.0.0.1:9/discord", "discord", "Test", "Msg", 10.0, 5.0).await;
-        let _ = send_webhook_notification("http://127.0.0.1:9/slack", "slack", "Test", "Msg", 10.0, 5.0).await;
+        let _ = send_webhook_notification(
+            "http://127.0.0.1:9/discord",
+            "discord",
+            "Test",
+            "Msg",
+            10.0,
+            5.0,
+        )
+        .await;
+        let _ = send_webhook_notification(
+            "http://127.0.0.1:9/slack",
+            "slack",
+            "Test",
+            "Msg",
+            10.0,
+            5.0,
+        )
+        .await;
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let local_addr = listener.local_addr().unwrap();
@@ -487,8 +507,16 @@ mod tests {
         let ok_url = format!("http://{local_addr}/ok");
         let err_url = format!("http://{local_addr}/err");
 
-        assert!(send_webhook_notification(&ok_url, "discord", "Test", "Msg", 10.0, 5.0).await.is_ok());
-        assert!(send_webhook_notification(&err_url, "slack", "Test", "Msg", 10.0, 5.0).await.is_err());
+        assert!(
+            send_webhook_notification(&ok_url, "discord", "Test", "Msg", 10.0, 5.0)
+                .await
+                .is_ok()
+        );
+        assert!(
+            send_webhook_notification(&err_url, "slack", "Test", "Msg", 10.0, 5.0)
+                .await
+                .is_err()
+        );
 
         let _ = update(
             Path(alert_id),
@@ -501,7 +529,9 @@ mod tests {
         let _ = shutdown_tx.send(());
         let _ = mock_srv.await;
 
-        let res_history = list_history(Path(website_id), State(state.clone())).await.unwrap();
+        let res_history = list_history(Path(website_id), State(state.clone()))
+            .await
+            .unwrap();
         assert!(res_history.0["data"].is_array());
 
         let res_del = delete(Path(alert_id), State(state.clone())).await.unwrap();
@@ -524,11 +554,27 @@ mod tests {
         };
 
         assert!(list(State(err_state.clone())).await.is_ok());
-        assert!(list_for_website(Path(website_id), State(err_state.clone())).await.is_ok());
-        assert!(list_history(Path(website_id), State(err_state.clone())).await.is_ok());
+        assert!(
+            list_for_website(Path(website_id), State(err_state.clone()))
+                .await
+                .is_ok()
+        );
+        assert!(
+            list_history(Path(website_id), State(err_state.clone()))
+                .await
+                .is_ok()
+        );
         assert!(create(State(err_state.clone()), Json(input)).await.is_err());
         assert!(get(Path(alert_id), State(err_state.clone())).await.is_err());
-        assert!(update(Path(alert_id), State(err_state.clone()), Json(json!({}))).await.is_err());
-        assert!(delete(Path(alert_id), State(err_state.clone())).await.is_err());
+        assert!(
+            update(Path(alert_id), State(err_state.clone()), Json(json!({})))
+                .await
+                .is_err()
+        );
+        assert!(
+            delete(Path(alert_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 }

@@ -8,7 +8,7 @@ export function useRouter() {
     back: () => navigate(-1),
     forward: () => navigate(1),
     refresh: () => {},
-    prefetch: () => {},
+    prefetch: (_url?: string) => {},
   };
 }
 

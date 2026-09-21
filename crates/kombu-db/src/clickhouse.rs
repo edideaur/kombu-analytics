@@ -33,8 +33,8 @@ impl ClickHouseConfig {
             return Err(ClickHouseError::InvalidUrl("Empty URL".to_string()));
         }
 
-        let parsed = reqwest::Url::parse(trimmed)
-            .map_err(|e| ClickHouseError::InvalidUrl(e.to_string()))?;
+        let parsed =
+            reqwest::Url::parse(trimmed).map_err(|e| ClickHouseError::InvalidUrl(e.to_string()))?;
 
         let host = parsed
             .host_str()
@@ -226,10 +226,7 @@ impl ClickHouseClient {
         Ok(results)
     }
 
-    pub async fn insert_events(
-        &self,
-        events: &[ClickHouseEvent],
-    ) -> Result<(), ClickHouseError> {
+    pub async fn insert_events(&self, events: &[ClickHouseEvent]) -> Result<(), ClickHouseError> {
         if events.is_empty() {
             return Ok(());
         }
@@ -245,10 +242,7 @@ impl ClickHouseClient {
             .client
             .post(&self.config.endpoint)
             .query(&[
-                (
-                    "query",
-                    "INSERT INTO website_event FORMAT JSONEachRow",
-                ),
+                ("query", "INSERT INTO website_event FORMAT JSONEachRow"),
                 ("database", &self.config.database),
             ])
             .header("Content-Type", "application/json")
@@ -270,10 +264,7 @@ impl ClickHouseClient {
 
     pub async fn apply_schema(&self) -> Result<(), ClickHouseError> {
         let db_query = format!("CREATE DATABASE IF NOT EXISTS `{}`", self.config.database);
-        let mut req = self
-            .client
-            .post(&self.config.endpoint)
-            .body(db_query);
+        let mut req = self.client.post(&self.config.endpoint).body(db_query);
 
         if let Some(user) = &self.config.username {
             req = req.basic_auth(user, self.config.password.as_deref());
@@ -378,7 +369,10 @@ mod tests {
         assert!(cfg.username.is_none());
         assert!(cfg.password.is_none());
 
-        let cfg2 = ClickHouseConfig::from_url("https://myuser:secret123@clickhouse.internal:8443/analytics").unwrap();
+        let cfg2 = ClickHouseConfig::from_url(
+            "https://myuser:secret123@clickhouse.internal:8443/analytics",
+        )
+        .unwrap();
         assert_eq!(cfg2.endpoint, "https://clickhouse.internal:8443");
         assert_eq!(cfg2.database, "analytics");
         assert_eq!(cfg2.username.as_deref(), Some("myuser"));
@@ -460,9 +454,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_clickhouse_mock_server_flow() {
-        use axum::{routing::post, routing::get, Router, response::IntoResponse};
-        use std::sync::atomic::{AtomicUsize, Ordering};
+        use axum::{Router, response::IntoResponse, routing::get, routing::post};
         use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
 
         let post_count = Arc::new(AtomicUsize::new(0));
         let count_clone = post_count.clone();
@@ -493,7 +487,10 @@ mod tests {
 
         let (port, shutdown_tx, server_handle) = spawn_test_server(app).await;
 
-        let client = ClickHouseClient::from_url(&format!("http://myuser:secret@127.0.0.1:{port}/test_kombu")).unwrap();
+        let client = ClickHouseClient::from_url(&format!(
+            "http://myuser:secret@127.0.0.1:{port}/test_kombu"
+        ))
+        .unwrap();
 
         let ping_ok = client.ping().await.unwrap();
         assert!(ping_ok);
@@ -553,7 +550,10 @@ mod tests {
         let rows: Vec<serde_json::Value> = client.query_json("SELECT 1").await.unwrap();
         assert_eq!(rows.len(), 1);
 
-        let rows_with_format: Vec<serde_json::Value> = client.query_json("SELECT 1 FORMAT JSONEachRow").await.unwrap();
+        let rows_with_format: Vec<serde_json::Value> = client
+            .query_json("SELECT 1 FORMAT JSONEachRow")
+            .await
+            .unwrap();
         assert_eq!(rows_with_format.len(), 1);
 
         let bad_rows: Result<Vec<serde_json::Value>, _> = client.query_json("SELECT BADJSON").await;
@@ -563,10 +563,19 @@ mod tests {
         assert!(fail_exec.is_err());
 
         let fail_app = Router::new()
-            .route("/ping", get(|| async { (axum::http::StatusCode::BAD_REQUEST, "err") }))
-            .route("/", post(|| async { (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "err") }));
+            .route(
+                "/ping",
+                get(|| async { (axum::http::StatusCode::BAD_REQUEST, "err") }),
+            )
+            .route(
+                "/",
+                post(|| async { (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "err") }),
+            );
         let (fail_port, fail_shutdown_tx, fail_server_handle) = spawn_test_server(fail_app).await;
-        let fail_client = ClickHouseClient::from_url(&format!("http://myuser:secret@127.0.0.1:{fail_port}/fail_db")).unwrap();
+        let fail_client = ClickHouseClient::from_url(&format!(
+            "http://myuser:secret@127.0.0.1:{fail_port}/fail_db"
+        ))
+        .unwrap();
 
         assert!(!fail_client.ping().await.unwrap());
         assert!(fail_client.apply_schema().await.is_err());
@@ -616,7 +625,8 @@ mod tests {
         let query_err: Result<Vec<serde_json::Value>, _> = fail_client.query_json("SELECT 1").await;
         assert!(query_err.is_err());
 
-        let no_auth = ClickHouseClient::from_url(&format!("http://127.0.0.1:{port}/test_kombu")).unwrap();
+        let no_auth =
+            ClickHouseClient::from_url(&format!("http://127.0.0.1:{port}/test_kombu")).unwrap();
         assert!(no_auth.execute("SELECT 1").await.is_ok());
         let no_auth_rows: Vec<serde_json::Value> = no_auth.query_json("SELECT 1").await.unwrap();
         assert_eq!(no_auth_rows.len(), 1);
@@ -651,7 +661,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clickhouse_error_paths() {
-        use axum::{routing::post, Router, response::IntoResponse};
+        use axum::{Router, response::IntoResponse, routing::post};
         use tokio::io::AsyncWriteExt;
 
         let dead_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -707,7 +717,10 @@ mod tests {
         assert!(dead.insert_events(std::slice::from_ref(&ev)).await.is_err());
         assert!(dead.apply_schema().await.is_err());
 
-        let nan_ev = ClickHouseEvent { lcp: Some(f64::NAN), ..ev.clone() };
+        let nan_ev = ClickHouseEvent {
+            lcp: Some(f64::NAN),
+            ..ev.clone()
+        };
         assert!(dead.insert_events(&[nan_ev]).await.is_err());
 
         let trunc_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -715,17 +728,18 @@ mod tests {
         tokio::spawn(async move {
             let (mut sock, _) = trunc_listener.accept().await.unwrap();
             let _ = sock
-                .write_all(b"HTTP/1.1 200 OK\r\ncontent-length: 100\r\nconnection: close\r\n\r\nshort")
+                .write_all(
+                    b"HTTP/1.1 200 OK\r\ncontent-length: 100\r\nconnection: close\r\n\r\nshort",
+                )
                 .await;
         });
-        let trunc = ClickHouseClient::from_url(&format!("http://127.0.0.1:{trunc_port}/db")).unwrap();
+        let trunc =
+            ClickHouseClient::from_url(&format!("http://127.0.0.1:{trunc_port}/db")).unwrap();
         let trunc_rows: Result<Vec<serde_json::Value>, _> = trunc.query_json("SELECT 1").await;
         assert!(trunc_rows.is_err());
 
-        let bad_json_app = Router::new().route(
-            "/",
-            post(|| async { "this is not json\n".into_response() }),
-        );
+        let bad_json_app =
+            Router::new().route("/", post(|| async { "this is not json\n".into_response() }));
         let (bad_port, bad_tx, bad_handle) = spawn_test_server(bad_json_app).await;
         let bad_json =
             ClickHouseClient::from_url(&format!("http://127.0.0.1:{bad_port}/db")).unwrap();
@@ -741,11 +755,7 @@ mod tests {
                 if body.contains("CREATE DATABASE") {
                     "OK\n".into_response()
                 } else {
-                    (
-                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                        "boom",
-                    )
-                        .into_response()
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "boom").into_response()
                 }
             }),
         );
@@ -763,11 +773,7 @@ mod tests {
                 if body.contains("CREATE DATABASE") || body.contains("PARTITION BY") {
                     "OK\n".into_response()
                 } else {
-                    (
-                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                        "boom",
-                    )
-                        .into_response()
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "boom").into_response()
                 }
             }),
         );

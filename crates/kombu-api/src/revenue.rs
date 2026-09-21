@@ -213,13 +213,29 @@ mod tests {
         let website_id = Uuid::now_v7();
         let q = Query(QueryRange::default());
 
-        assert!(stats(Path(website_id), q.clone(), State(state.clone())).await.is_ok());
+        assert!(
+            stats(Path(website_id), q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
-        assert!(chart(Path(website_id), q.clone(), State(state.clone())).await.is_ok());
+        assert!(
+            chart(Path(website_id), q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
-        assert!(metrics(Path(website_id), q.clone(), State(state.clone())).await.is_ok());
+        assert!(
+            metrics(Path(website_id), q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
-        assert!(sessions(Path(website_id), q.clone(), State(state.clone())).await.is_ok());
+        assert!(
+            sessions(Path(website_id), q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -232,8 +248,20 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(chart(Path(website_id), q.clone(), State(err_state.clone())).await.is_err());
-        assert!(metrics(Path(website_id), q.clone(), State(err_state.clone())).await.is_err());
-        assert!(sessions(Path(website_id), q.clone(), State(err_state.clone())).await.is_err());
+        assert!(
+            chart(Path(website_id), q.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            metrics(Path(website_id), q.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            sessions(Path(website_id), q.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 }

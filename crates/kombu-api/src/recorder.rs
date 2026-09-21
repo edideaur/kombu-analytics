@@ -302,7 +302,14 @@ mod tests {
         let session_id = Uuid::now_v7();
 
         assert!(record(State(state.clone()), Json(json!({}))).await.is_err());
-        assert!(record(State(state.clone()), Json(json!({ "websiteId": website_id }))).await.is_err());
+        assert!(
+            record(
+                State(state.clone()),
+                Json(json!({ "websiteId": website_id }))
+            )
+            .await
+            .is_err()
+        );
 
         let _ = sqlx::query(
             r#"INSERT INTO "website" (website_id, name, domain, recorder_enabled, replay_config) VALUES ($1, $2, $3, true, '{"sampleRate": 1.0}')"#,
@@ -334,16 +341,32 @@ mod tests {
         )
         .await;
         assert!(res_rec.is_ok());
-        let replay_id: Uuid = res_rec.unwrap().0["replayId"].as_str().unwrap().parse().unwrap();
+        let replay_id: Uuid = res_rec.unwrap().0["replayId"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
 
         let res_cfg = recorder_config(Path(website_id), State(state.clone())).await;
         assert!(res_cfg.is_ok());
         let res_cfg_404 = recorder_config(Path(Uuid::now_v7()), State(state.clone())).await;
         assert!(res_cfg_404.is_err());
 
-        assert!(list_replays(Path(website_id), State(state.clone())).await.is_ok());
-        assert!(list_session_replays(Path((website_id, session_id)), State(state.clone())).await.is_ok());
-        assert!(list_saved_replays(Path(website_id), State(state.clone())).await.is_ok());
+        assert!(
+            list_replays(Path(website_id), State(state.clone()))
+                .await
+                .is_ok()
+        );
+        assert!(
+            list_session_replays(Path((website_id, session_id)), State(state.clone()))
+                .await
+                .is_ok()
+        );
+        assert!(
+            list_saved_replays(Path(website_id), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
         let gsr_res = get_saved_replay(Path((website_id, replay_id)), State(state.clone())).await;
         assert!(gsr_res.is_ok());
@@ -369,17 +392,28 @@ mod tests {
         .await;
         assert!(res_unsave.is_ok());
 
-        let res_del = delete_saved_replay(Path((website_id, replay_id)), State(state.clone())).await;
+        let res_del =
+            delete_saved_replay(Path((website_id, replay_id)), State(state.clone())).await;
         assert!(res_del.is_ok());
 
         let res_get_rep = get_replay(Path((website_id, replay_id)), State(state.clone())).await;
         assert!(res_get_rep.is_ok());
-        let res_get_rep_404 = get_replay(Path((website_id, Uuid::now_v7())), State(state.clone())).await;
+        let res_get_rep_404 =
+            get_replay(Path((website_id, Uuid::now_v7())), State(state.clone())).await;
         assert!(res_get_rep_404.is_err());
 
-        let _ = sqlx::query(r#"DELETE FROM "session_replay" WHERE replay_id = $1"#).bind(replay_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "session" WHERE session_id = $1"#).bind(session_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#).bind(website_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "session_replay" WHERE replay_id = $1"#)
+            .bind(replay_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "session" WHERE session_id = $1"#)
+            .bind(session_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
+            .bind(website_id)
+            .execute(&pool)
+            .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -392,14 +426,67 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(record(State(err_state.clone()), Json(json!({"websiteId": website_id, "sessionId": session_id}))).await.is_err());
-        assert!(recorder_config(Path(website_id), State(err_state.clone())).await.is_err());
-        assert!(list_replays(Path(website_id), State(err_state.clone())).await.is_err());
-        assert!(list_session_replays(Path((website_id, session_id)), State(err_state.clone())).await.is_err());
-        assert!(get_saved_replay(Path((website_id, replay_id)), State(err_state.clone())).await.is_err());
-        assert!(save_replay(Path((website_id, replay_id)), State(err_state.clone()), Json(SaveReplayPayload { is_saved: Some(true), name: None })).await.is_err());
-        assert!(save_replay(Path((website_id, replay_id)), State(err_state.clone()), Json(SaveReplayPayload { is_saved: Some(false), name: None })).await.is_err());
-        assert!(delete_saved_replay(Path((website_id, replay_id)), State(err_state.clone())).await.is_err());
-        assert!(get_replay(Path((website_id, replay_id)), State(err_state.clone())).await.is_err());
+        assert!(
+            record(
+                State(err_state.clone()),
+                Json(json!({"websiteId": website_id, "sessionId": session_id}))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            recorder_config(Path(website_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            list_replays(Path(website_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            list_session_replays(Path((website_id, session_id)), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            get_saved_replay(Path((website_id, replay_id)), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            save_replay(
+                Path((website_id, replay_id)),
+                State(err_state.clone()),
+                Json(SaveReplayPayload {
+                    is_saved: Some(true),
+                    name: None
+                })
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            save_replay(
+                Path((website_id, replay_id)),
+                State(err_state.clone()),
+                Json(SaveReplayPayload {
+                    is_saved: Some(false),
+                    name: None
+                })
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete_saved_replay(Path((website_id, replay_id)), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            get_replay(Path((website_id, replay_id)), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 }

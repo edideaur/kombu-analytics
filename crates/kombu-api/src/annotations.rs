@@ -297,14 +297,13 @@ mod tests {
         };
 
         let website_id = Uuid::now_v7();
-        let _ = sqlx::query(
-            r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#,
-        )
-        .bind(website_id)
-        .bind("Annotations Web")
-        .bind(format!("ann-{website_id}.com"))
-        .execute(&pool)
-        .await;
+        let _ =
+            sqlx::query(r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#)
+                .bind(website_id)
+                .bind("Annotations Web")
+                .bind(format!("ann-{website_id}.com"))
+                .execute(&pool)
+                .await;
 
         let input = AnnotationInput {
             website_id: Some(website_id),
@@ -315,16 +314,28 @@ mod tests {
         };
         let res_create = create(Path(website_id), State(state.clone()), Json(input)).await;
         assert!(res_create.is_ok());
-        let ann_id: Uuid = res_create.unwrap().1.0["id"].as_str().unwrap().parse().unwrap();
+        let ann_id: Uuid = res_create.unwrap().1.0["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
 
         let q = Query(AnnotationQuery {
             start_at: None,
             end_at: None,
         });
-        assert!(list_for_website(Path(website_id), q, State(state.clone())).await.is_ok());
+        assert!(
+            list_for_website(Path(website_id), q, State(state.clone()))
+                .await
+                .is_ok()
+        );
 
         assert!(get(Path(ann_id), State(state.clone())).await.is_ok());
-        assert!(get(Path(Uuid::now_v7()), State(state.clone())).await.is_err());
+        assert!(
+            get(Path(Uuid::now_v7()), State(state.clone()))
+                .await
+                .is_err()
+        );
 
         let upd_input = AnnotationUpdateInput {
             date: None,
@@ -332,8 +343,25 @@ mod tests {
             description: None,
             color: Some("secondary".into()),
         };
-        assert!(update(Path(ann_id), State(state.clone()), Json(upd_input)).await.is_ok());
-        assert!(update(Path(Uuid::now_v7()), State(state.clone()), Json(AnnotationUpdateInput { date: None, title: None, description: None, color: None })).await.is_err());
+        assert!(
+            update(Path(ann_id), State(state.clone()), Json(upd_input))
+                .await
+                .is_ok()
+        );
+        assert!(
+            update(
+                Path(Uuid::now_v7()),
+                State(state.clone()),
+                Json(AnnotationUpdateInput {
+                    date: None,
+                    title: None,
+                    description: None,
+                    color: None
+                })
+            )
+            .await
+            .is_err()
+        );
 
         let upd_toolong = AnnotationUpdateInput {
             date: None,
@@ -341,12 +369,23 @@ mod tests {
             description: None,
             color: None,
         };
-        assert!(update(Path(ann_id), State(state.clone()), Json(upd_toolong)).await.is_err());
+        assert!(
+            update(Path(ann_id), State(state.clone()), Json(upd_toolong))
+                .await
+                .is_err()
+        );
 
         assert!(delete(Path(ann_id), State(state.clone())).await.is_ok());
-        assert!(delete(Path(Uuid::now_v7()), State(state.clone())).await.is_err());
+        assert!(
+            delete(Path(Uuid::now_v7()), State(state.clone()))
+                .await
+                .is_err()
+        );
 
-        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#).bind(website_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
+            .bind(website_id)
+            .execute(&pool)
+            .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -359,9 +398,51 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(create(Path(website_id), State(err_state.clone()), Json(AnnotationInput { website_id: None, date: None, title: "err".into(), description: None, color: None })).await.is_err());
-        assert!(list_for_website(Path(website_id), Query(AnnotationQuery { start_at: None, end_at: None }), State(err_state.clone())).await.is_ok());
-        assert!(update(Path(ann_id), State(err_state.clone()), Json(AnnotationUpdateInput { date: None, title: None, description: None, color: None })).await.is_err());
-        assert!(delete(Path(ann_id), State(err_state.clone())).await.is_err());
+        assert!(
+            create(
+                Path(website_id),
+                State(err_state.clone()),
+                Json(AnnotationInput {
+                    website_id: None,
+                    date: None,
+                    title: "err".into(),
+                    description: None,
+                    color: None
+                })
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            list_for_website(
+                Path(website_id),
+                Query(AnnotationQuery {
+                    start_at: None,
+                    end_at: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_ok()
+        );
+        assert!(
+            update(
+                Path(ann_id),
+                State(err_state.clone()),
+                Json(AnnotationUpdateInput {
+                    date: None,
+                    title: None,
+                    description: None,
+                    color: None
+                })
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete(Path(ann_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 }

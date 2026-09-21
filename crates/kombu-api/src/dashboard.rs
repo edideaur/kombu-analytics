@@ -66,7 +66,12 @@ pub async fn overview(
         .bind(query.limit.unwrap_or(50))
         .fetch_all(&state.pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+        })?
     } else {
         let uid = user_id.unwrap_or_default();
         sqlx::query_as::<_, (Uuid, String, Option<String>)>(
@@ -83,7 +88,12 @@ pub async fn overview(
         .bind(query.limit.unwrap_or(50))
         .fetch_all(&state.pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+        })?
     };
 
     let mut total_pageviews = 0i64;
@@ -345,8 +355,16 @@ mod tests {
             unit: None,
             limit: Some(10),
         });
-        assert!(overview(HeaderMap::new(), q.clone(), State(state.clone())).await.is_ok());
-        assert!(overview(headers.clone(), q.clone(), State(state.clone())).await.is_ok());
+        assert!(
+            overview(HeaderMap::new(), q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
+        assert!(
+            overview(headers.clone(), q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
         let admin_user_id = Uuid::now_v7();
         let _ = sqlx::query(
@@ -374,8 +392,15 @@ mod tests {
             "authorization",
             HeaderValue::from_str(&format!("Bearer {admin_token}")).unwrap(),
         );
-        assert!(overview(admin_headers, q.clone(), State(state.clone())).await.is_ok());
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(admin_user_id).execute(&pool).await;
+        assert!(
+            overview(admin_headers, q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(admin_user_id)
+            .execute(&pool)
+            .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -388,8 +413,20 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(overview(HeaderMap::new(), q.clone(), State(err_state.clone())).await.is_err());
-        assert!(overview(headers.clone(), q.clone(), State(err_state.clone())).await.is_err());
-        assert!(save(headers.clone(), State(err_state.clone()), Json(json!({}))).await.is_err());
+        assert!(
+            overview(HeaderMap::new(), q.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            overview(headers.clone(), q.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            save(headers.clone(), State(err_state.clone()), Json(json!({})))
+                .await
+                .is_err()
+        );
     }
 }

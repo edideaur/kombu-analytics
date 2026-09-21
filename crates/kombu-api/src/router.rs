@@ -450,7 +450,8 @@ pub fn build_router_with_lookup(pool: PgPool, get_env: &dyn Fn(&str) -> Option<S
         .and_then(|v| v.parse::<u64>().ok())
         .unwrap_or(86400);
 
-    let cors = if let Some(allowed) = get_env("ALLOWED_ORIGINS").or_else(|| get_env("CORS_ORIGIN")) {
+    let cors = if let Some(allowed) = get_env("ALLOWED_ORIGINS").or_else(|| get_env("CORS_ORIGIN"))
+    {
         let origins: Vec<axum::http::HeaderValue> = allowed
             .split(',')
             .filter_map(|s| s.trim().parse().ok())
@@ -472,8 +473,8 @@ pub fn build_router_with_lookup(pool: PgPool, get_env: &dyn Fn(&str) -> Option<S
         CorsLayer::permissive().max_age(std::time::Duration::from_secs(max_age_secs))
     };
 
-    let force_ssl = get_env("FORCE_SSL")
-        .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+    let force_ssl =
+        get_env("FORCE_SSL").is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
 
     router
         .layer(axum::middleware::from_fn_with_state(
@@ -763,7 +764,11 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res_script.status(), StatusCode::OK);
-        assert!(res_script.headers().contains_key(axum::http::header::STRICT_TRANSPORT_SECURITY));
+        assert!(
+            res_script
+                .headers()
+                .contains_key(axum::http::header::STRICT_TRANSPORT_SECURITY)
+        );
 
         let res_collect = app
             .clone()

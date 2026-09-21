@@ -101,12 +101,30 @@ mod tests {
         assert!(custom.matches(BitmaskFilter::MASK_ERROR));
         assert!(!custom.matches(BitmaskFilter::MASK_LINK_CLICK));
 
-        assert_eq!(BitmaskFilter::event_type_to_mask(1), BitmaskFilter::MASK_PAGEVIEW);
-        assert_eq!(BitmaskFilter::event_type_to_mask(2), BitmaskFilter::MASK_CUSTOM_EVENT);
-        assert_eq!(BitmaskFilter::event_type_to_mask(3), BitmaskFilter::MASK_LINK_CLICK);
-        assert_eq!(BitmaskFilter::event_type_to_mask(4), BitmaskFilter::MASK_PIXEL);
-        assert_eq!(BitmaskFilter::event_type_to_mask(5), BitmaskFilter::MASK_PERFORMANCE);
-        assert_eq!(BitmaskFilter::event_type_to_mask(6), BitmaskFilter::MASK_ERROR);
+        assert_eq!(
+            BitmaskFilter::event_type_to_mask(1),
+            BitmaskFilter::MASK_PAGEVIEW
+        );
+        assert_eq!(
+            BitmaskFilter::event_type_to_mask(2),
+            BitmaskFilter::MASK_CUSTOM_EVENT
+        );
+        assert_eq!(
+            BitmaskFilter::event_type_to_mask(3),
+            BitmaskFilter::MASK_LINK_CLICK
+        );
+        assert_eq!(
+            BitmaskFilter::event_type_to_mask(4),
+            BitmaskFilter::MASK_PIXEL
+        );
+        assert_eq!(
+            BitmaskFilter::event_type_to_mask(5),
+            BitmaskFilter::MASK_PERFORMANCE
+        );
+        assert_eq!(
+            BitmaskFilter::event_type_to_mask(6),
+            BitmaskFilter::MASK_ERROR
+        );
         assert_eq!(BitmaskFilter::event_type_to_mask(999), 0);
     }
 

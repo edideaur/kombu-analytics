@@ -414,14 +414,13 @@ mod tests {
         let event_data_id = Uuid::now_v7();
         let now = Utc::now();
 
-        let _ = sqlx::query(
-            r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#,
-        )
-        .bind(website_id)
-        .bind("Event Data Test Web")
-        .bind(format!("ed-{website_id}.com"))
-        .execute(&pool)
-        .await;
+        let _ =
+            sqlx::query(r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#)
+                .bind(website_id)
+                .bind("Event Data Test Web")
+                .bind(format!("ed-{website_id}.com"))
+                .execute(&pool)
+                .await;
 
         let _ = sqlx::query(
             r#"INSERT INTO "session" (session_id, website_id, hostname, browser, os, device, screen, language, country, distinct_id)
@@ -462,78 +461,120 @@ mod tests {
             timezone: None,
         };
 
-        let res_list = list(Path(website_id), Query(EventDataQuery {
-            start_at: None,
-            end_at: None,
-            key: None,
-            property_name: None,
-            unit: None,
-            timezone: None,
-        }), State(state.clone())).await;
+        let res_list = list(
+            Path(website_id),
+            Query(EventDataQuery {
+                start_at: None,
+                end_at: None,
+                key: None,
+                property_name: None,
+                unit: None,
+                timezone: None,
+            }),
+            State(state.clone()),
+        )
+        .await;
         assert!(res_list.is_ok());
 
         let res_props = properties(Path(website_id), Query(q), State(state.clone())).await;
         assert!(res_props.is_ok());
 
-        let res_vals = values(Path(website_id), Query(EventDataQuery {
-            start_at: None,
-            end_at: None,
-            key: None,
-            property_name: Some("plan".into()),
-            unit: None,
-            timezone: None,
-        }), State(state.clone())).await;
+        let res_vals = values(
+            Path(website_id),
+            Query(EventDataQuery {
+                start_at: None,
+                end_at: None,
+                key: None,
+                property_name: Some("plan".into()),
+                unit: None,
+                timezone: None,
+            }),
+            State(state.clone()),
+        )
+        .await;
         assert!(res_vals.is_ok());
 
         for u in ["hour", "day", "invalid"] {
-            let res_vals_unit = values(Path(website_id), Query(EventDataQuery {
-                start_at: None,
-                end_at: None,
-                key: Some("plan".into()),
-                property_name: None,
-                unit: Some(u.into()),
-                timezone: None,
-            }), State(state.clone())).await;
+            let res_vals_unit = values(
+                Path(website_id),
+                Query(EventDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    key: Some("plan".into()),
+                    property_name: None,
+                    unit: Some(u.into()),
+                    timezone: None,
+                }),
+                State(state.clone()),
+            )
+            .await;
             assert!(res_vals_unit.is_ok());
         }
 
         let res_get = get_by_id(Path((website_id, event_id)), State(state.clone())).await;
         assert!(res_get.is_ok());
 
-        let res_fields = fields(Path(website_id), Query(EventDataQuery {
-            start_at: None,
-            end_at: None,
-            key: None,
-            property_name: None,
-            unit: None,
-            timezone: None,
-        }), State(state.clone())).await;
+        let res_fields = fields(
+            Path(website_id),
+            Query(EventDataQuery {
+                start_at: None,
+                end_at: None,
+                key: None,
+                property_name: None,
+                unit: None,
+                timezone: None,
+            }),
+            State(state.clone()),
+        )
+        .await;
         assert!(res_fields.is_ok());
 
-        let res_events = events(Path(website_id), Query(EventDataQuery {
-            start_at: None,
-            end_at: None,
-            key: None,
-            property_name: None,
-            unit: None,
-            timezone: None,
-        }), State(state.clone())).await;
+        let res_events = events(
+            Path(website_id),
+            Query(EventDataQuery {
+                start_at: None,
+                end_at: None,
+                key: None,
+                property_name: None,
+                unit: None,
+                timezone: None,
+            }),
+            State(state.clone()),
+        )
+        .await;
         assert!(res_events.is_ok());
 
-        let res_pivot = pivot(Path(website_id), Query(EventDataQuery {
-            start_at: None,
-            end_at: None,
-            key: None,
-            property_name: None,
-            unit: None,
-            timezone: None,
-        }), State(state.clone())).await;
+        let res_pivot = pivot(
+            Path(website_id),
+            Query(EventDataQuery {
+                start_at: None,
+                end_at: None,
+                key: None,
+                property_name: None,
+                unit: None,
+                timezone: None,
+            }),
+            State(state.clone()),
+        )
+        .await;
         assert!(res_pivot.is_ok());
 
-        let _ = sqlx::query(r#"DELETE FROM "event_data" WHERE event_data_id = $1"#).bind(event_data_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "website_event" WHERE event_id = $1"#).bind(event_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "session" WHERE session_id = $1"#).bind(session_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#).bind(website_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "event_data" WHERE event_data_id = $1"#)
+            .bind(event_data_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "website_event" WHERE event_id = $1"#)
+            .bind(event_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "session" WHERE session_id = $1"#)
+            .bind(session_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
+            .bind(website_id)
+            .execute(&pool)
+            .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -554,13 +595,111 @@ mod tests {
             unit: None,
             timezone: None,
         });
-        assert!(list(Path(website_id), dummy_q, State(err_state.clone())).await.is_err());
-        assert!(properties(Path(website_id), Query(EventDataQuery { start_at: None, end_at: None, key: None, property_name: None, unit: None, timezone: None }), State(err_state.clone())).await.is_err());
-        assert!(values(Path(website_id), Query(EventDataQuery { start_at: None, end_at: None, key: None, property_name: None, unit: None, timezone: None }), State(err_state.clone())).await.is_err());
-        assert!(values(Path(website_id), Query(EventDataQuery { start_at: None, end_at: None, key: None, property_name: None, unit: Some("day".into()), timezone: None }), State(err_state.clone())).await.is_err());
-        assert!(get_by_id(Path((website_id, event_id)), State(err_state.clone())).await.is_err());
-        assert!(fields(Path(website_id), Query(EventDataQuery { start_at: None, end_at: None, key: None, property_name: None, unit: None, timezone: None }), State(err_state.clone())).await.is_err());
-        assert!(events(Path(website_id), Query(EventDataQuery { start_at: None, end_at: None, key: None, property_name: None, unit: None, timezone: None }), State(err_state.clone())).await.is_err());
-        assert!(pivot(Path(website_id), Query(EventDataQuery { start_at: None, end_at: None, key: None, property_name: None, unit: None, timezone: None }), State(err_state.clone())).await.is_err());
+        assert!(
+            list(Path(website_id), dummy_q, State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            properties(
+                Path(website_id),
+                Query(EventDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    key: None,
+                    property_name: None,
+                    unit: None,
+                    timezone: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            values(
+                Path(website_id),
+                Query(EventDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    key: None,
+                    property_name: None,
+                    unit: None,
+                    timezone: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            values(
+                Path(website_id),
+                Query(EventDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    key: None,
+                    property_name: None,
+                    unit: Some("day".into()),
+                    timezone: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            get_by_id(Path((website_id, event_id)), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            fields(
+                Path(website_id),
+                Query(EventDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    key: None,
+                    property_name: None,
+                    unit: None,
+                    timezone: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            events(
+                Path(website_id),
+                Query(EventDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    key: None,
+                    property_name: None,
+                    unit: None,
+                    timezone: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            pivot(
+                Path(website_id),
+                Query(EventDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    key: None,
+                    property_name: None,
+                    unit: None,
+                    timezone: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
     }
 }

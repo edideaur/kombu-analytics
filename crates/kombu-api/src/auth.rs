@@ -79,14 +79,22 @@ pub fn hash_password(password: &str) -> Result<String, (StatusCode, Json<Value>)
     hash_password_with_cost(password, 10)
 }
 
-pub fn hash_password_with_cost(password: &str, cost: u32) -> Result<String, (StatusCode, Json<Value>)> {
+pub fn hash_password_with_cost(
+    password: &str,
+    cost: u32,
+) -> Result<String, (StatusCode, Json<Value>)> {
     if password.len() < 8 {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(json!({ "error": "Password must be at least 8 characters long" })),
         ));
     }
-    bcrypt::hash(password, cost).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": format!("Password hashing failed: {e}") }))))
+    bcrypt::hash(password, cost).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": format!("Password hashing failed: {e}") })),
+        )
+    })
 }
 
 #[must_use]
@@ -210,7 +218,12 @@ pub async fn login(
     .bind(&username_lower)
     .fetch_optional(&state.pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+    })?;
 
     let Some((user_id, username, password_hash, role)) = row else {
         return Err((
@@ -229,14 +242,15 @@ pub async fn login(
 
     let secret = std::env::var("APP_SECRET").unwrap_or_else(|_| "kombu-secret".into());
 
-    let (secret_base32, two_factor_enabled): (Option<String>, bool) = sqlx::query_as::<_, (String, bool)>(
-        r#"SELECT secret, is_enabled FROM "two_factor_auth" WHERE user_id = $1"#,
-    )
-    .bind(user_id)
-    .fetch_optional(&state.pool)
-    .await
-    .unwrap_or(None)
-    .map_or((None, false), |(sec, en)| (Some(sec), en));
+    let (secret_base32, two_factor_enabled): (Option<String>, bool) =
+        sqlx::query_as::<_, (String, bool)>(
+            r#"SELECT secret, is_enabled FROM "two_factor_auth" WHERE user_id = $1"#,
+        )
+        .bind(user_id)
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap_or(None)
+        .map_or((None, false), |(sec, en)| (Some(sec), en));
 
     if two_factor_enabled {
         let mut totp_verified = false;
@@ -296,7 +310,12 @@ pub fn encode_jwt_token<T: serde::Serialize>(
         claims,
         &EncodingKey::from_secret(secret.as_bytes()),
     )
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+    })
 }
 
 pub fn create_user_token(
@@ -348,7 +367,12 @@ pub async fn verify(
     .bind(claims.user_id)
     .fetch_optional(&state.pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+    })?;
 
     let (username, role) = match db_user {
         Some((u, r)) => (u, r),
@@ -406,8 +430,8 @@ pub fn sso_config_with_lookup(get_var: &dyn Fn(&str) -> Option<String>) -> Json<
         "sso"
     };
 
-    let button_label = get_var("SSO_BUTTON_LABEL")
-        .unwrap_or_else(|| "Sign in with SSO".to_string());
+    let button_label =
+        get_var("SSO_BUTTON_LABEL").unwrap_or_else(|| "Sign in with SSO".to_string());
 
     Json(json!({
         "enabled": enabled,
@@ -469,9 +493,7 @@ pub async fn sso_login(
                 .map(str::to_string)
         });
 
-    let effective_username = header_user
-        .map(str::to_string)
-        .or(username_from_token);
+    let effective_username = header_user.map(str::to_string).or(username_from_token);
 
     let Some(username) = effective_username else {
         return Err((
@@ -521,10 +543,12 @@ pub async fn sso_login(
             (u, r)
         } else {
             let new_uid = Uuid::now_v7();
-            let count_users = sqlx::query_scalar::<_, i64>(r#"SELECT COUNT(*) FROM "user" WHERE deleted_at IS NULL"#)
-                .fetch_one(&state.pool)
-                .await
-                .unwrap_or(0);
+            let count_users = sqlx::query_scalar::<_, i64>(
+                r#"SELECT COUNT(*) FROM "user" WHERE deleted_at IS NULL"#,
+            )
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(0);
 
             let default_role = determine_sso_role(count_users);
 
@@ -675,11 +699,17 @@ mod tests {
         assert_eq!(get_token_from_headers(&basic_headers), None);
 
         let mut invalid_jwt_headers = HeaderMap::new();
-        invalid_jwt_headers.insert("authorization", HeaderValue::from_static("Bearer not-a-valid-jwt"));
+        invalid_jwt_headers.insert(
+            "authorization",
+            HeaderValue::from_static("Bearer not-a-valid-jwt"),
+        );
         assert!(get_claims_from_headers(&invalid_jwt_headers).is_none());
 
         let mut malformed_cookie_headers = HeaderMap::new();
-        malformed_cookie_headers.insert("cookie", HeaderValue::from_static("malformed_cookie_no_equal; other=123"));
+        malformed_cookie_headers.insert(
+            "cookie",
+            HeaderValue::from_static("malformed_cookie_no_equal; other=123"),
+        );
         assert_eq!(get_token_from_headers(&malformed_cookie_headers), None);
 
         assert_eq!(determine_sso_role(0), "admin");
@@ -722,7 +752,9 @@ mod tests {
             .body(())
             .unwrap();
         let (mut parts_admin, ()) = req_admin.into_parts();
-        let admin = AdminUser::from_request_parts(&mut parts_admin, &()).await.unwrap();
+        let admin = AdminUser::from_request_parts(&mut parts_admin, &())
+            .await
+            .unwrap();
         assert_eq!(admin.0.role, "admin");
 
         let req_non_admin = Request::builder()
@@ -735,15 +767,21 @@ mod tests {
         assert_eq!(res_forbidden.unwrap_err().0, StatusCode::FORBIDDEN);
 
         let mut parts_m1 = parts;
-        let maybe_some = MaybeAuthUser::from_request_parts(&mut parts_m1, &()).await.unwrap();
+        let maybe_some = MaybeAuthUser::from_request_parts(&mut parts_m1, &())
+            .await
+            .unwrap();
         assert!(maybe_some.0.is_some());
 
         let mut parts_m2 = parts_part;
-        let maybe_part = MaybeAuthUser::from_request_parts(&mut parts_m2, &()).await.unwrap();
+        let maybe_part = MaybeAuthUser::from_request_parts(&mut parts_m2, &())
+            .await
+            .unwrap();
         assert!(maybe_part.0.is_none());
 
         let mut parts_m3 = parts_empty;
-        let maybe_none = MaybeAuthUser::from_request_parts(&mut parts_m3, &()).await.unwrap();
+        let maybe_none = MaybeAuthUser::from_request_parts(&mut parts_m3, &())
+            .await
+            .unwrap();
         assert!(maybe_none.0.is_none());
     }
 
@@ -934,10 +972,11 @@ mod tests {
         .unwrap();
         assert_eq!(res_2fa_inv_sec.0["twoFactorRequired"], true);
 
-        let _ = sqlx::query(r#"UPDATE "two_factor_auth" SET is_enabled = false WHERE user_id = $1"#)
-            .bind(user_id)
-            .execute(&pool)
-            .await;
+        let _ =
+            sqlx::query(r#"UPDATE "two_factor_auth" SET is_enabled = false WHERE user_id = $1"#)
+                .bind(user_id)
+                .execute(&pool)
+                .await;
         let res_2fa_dis_sec = login(
             headers.clone(),
             State(state.clone()),
@@ -951,11 +990,37 @@ mod tests {
         .unwrap();
         assert!(res_2fa_dis_sec.0["token"].is_string());
 
-        assert!(sso_login(HeaderMap::new(), State(state.clone()), None).await.is_err());
-        assert!(sso_login(HeaderMap::new(), State(state.clone()), Some(Json(SsoLoginPayload::default()))).await.is_err());
+        assert!(
+            sso_login(HeaderMap::new(), State(state.clone()), None)
+                .await
+                .is_err()
+        );
+        assert!(
+            sso_login(
+                HeaderMap::new(),
+                State(state.clone()),
+                Some(Json(SsoLoginPayload::default()))
+            )
+            .await
+            .is_err()
+        );
 
-        assert!(sso_callback(Query(SsoCallbackParams { code: Some("auth-code".into()), state: None })).await.is_ok());
-        assert!(sso_callback(Query(SsoCallbackParams { code: None, state: None })).await.is_err());
+        assert!(
+            sso_callback(Query(SsoCallbackParams {
+                code: Some("auth-code".into()),
+                state: None
+            }))
+            .await
+            .is_ok()
+        );
+        assert!(
+            sso_callback(Query(SsoCallbackParams {
+                code: None,
+                state: None
+            }))
+            .await
+            .is_err()
+        );
 
         let sso_payload = SsoLoginPayload {
             token: Some("eyJhbGciOiJIUzI1NiJ9.eyJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzc29fdXNlciIsImVtYWlsIjoic3NvQGV4YW1wbGUuY29tIn0.sig".into()),
@@ -963,22 +1028,44 @@ mod tests {
             provider: Some("oidc_provider".into()),
             ..Default::default()
         };
-        let res_sso_first = sso_login(HeaderMap::new(), State(state.clone()), Some(Json(sso_payload.clone()))).await;
+        let res_sso_first = sso_login(
+            HeaderMap::new(),
+            State(state.clone()),
+            Some(Json(sso_payload.clone())),
+        )
+        .await;
         assert!(res_sso_first.is_ok());
-        let sso_uid = Uuid::parse_str(res_sso_first.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
+        let sso_uid =
+            Uuid::parse_str(res_sso_first.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
 
-        let res_sso_again = sso_login(HeaderMap::new(), State(state.clone()), Some(Json(sso_payload.clone()))).await;
+        let res_sso_again = sso_login(
+            HeaderMap::new(),
+            State(state.clone()),
+            Some(Json(sso_payload.clone())),
+        )
+        .await;
         assert!(res_sso_again.is_ok());
 
         let _ = sqlx::query(r#"UPDATE "user" SET deleted_at = NOW() WHERE user_id = $1"#)
             .bind(sso_uid)
             .execute(&pool)
             .await;
-        let res_sso_orphan = sso_login(HeaderMap::new(), State(state.clone()), Some(Json(sso_payload.clone()))).await;
+        let res_sso_orphan = sso_login(
+            HeaderMap::new(),
+            State(state.clone()),
+            Some(Json(sso_payload.clone())),
+        )
+        .await;
         assert!(res_sso_orphan.is_ok());
         assert_eq!(res_sso_orphan.unwrap().0["user"]["role"], "view-only");
-        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#).bind(sso_uid).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(sso_uid).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#)
+            .bind(sso_uid)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(sso_uid)
+            .execute(&pool)
+            .await;
 
         let pre_existing_sso_uid = Uuid::now_v7();
         let pre_existing_sso_uname = format!("sso_pre_{}", pre_existing_sso_uid.simple());
@@ -992,82 +1079,176 @@ mod tests {
 
         let sso_jwt = format!(
             "eyJhbGciOiJIUzI1NiJ9.{}.sig",
-            base64::prelude::BASE64_STANDARD_NO_PAD.encode(
-                json!({ "preferred_username": pre_existing_sso_uname }).to_string()
-            )
+            base64::prelude::BASE64_STANDARD_NO_PAD
+                .encode(json!({ "preferred_username": pre_existing_sso_uname }).to_string())
         );
         let sso_link_payload = SsoLoginPayload {
             token: Some(sso_jwt),
             provider: Some("custom_sso_provider".into()),
             ..Default::default()
         };
-        let res_sso_link = sso_login(HeaderMap::new(), State(state.clone()), Some(Json(sso_link_payload))).await;
+        let res_sso_link = sso_login(
+            HeaderMap::new(),
+            State(state.clone()),
+            Some(Json(sso_link_payload)),
+        )
+        .await;
         assert!(res_sso_link.is_ok());
-        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#).bind(pre_existing_sso_uid).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(pre_existing_sso_uid).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#)
+            .bind(pre_existing_sso_uid)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(pre_existing_sso_uid)
+            .execute(&pool)
+            .await;
 
         let sso_no_provider = SsoLoginPayload {
-            token: Some("eyJhbGciOiJIUzI1NiJ9.eyJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzc29fcHJvdmlkZXJfbGVzcyJ9.sig".into()),
+            token: Some(
+                "eyJhbGciOiJIUzI1NiJ9.eyJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzc29fcHJvdmlkZXJfbGVzcyJ9.sig"
+                    .into(),
+            ),
             provider: None,
             ..Default::default()
         };
-        let res_sso_noprov = sso_login(HeaderMap::new(), State(state.clone()), Some(Json(sso_no_provider.clone()))).await;
+        let res_sso_noprov = sso_login(
+            HeaderMap::new(),
+            State(state.clone()),
+            Some(Json(sso_no_provider.clone())),
+        )
+        .await;
         assert!(res_sso_noprov.is_ok());
-        let noprov_uid = Uuid::parse_str(res_sso_noprov.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
-        assert!(sso_login(HeaderMap::new(), State(state.clone()), Some(Json(sso_no_provider))).await.is_ok());
-        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#).bind(noprov_uid).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(noprov_uid).execute(&pool).await;
+        let noprov_uid =
+            Uuid::parse_str(res_sso_noprov.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
+        assert!(
+            sso_login(
+                HeaderMap::new(),
+                State(state.clone()),
+                Some(Json(sso_no_provider))
+            )
+            .await
+            .is_ok()
+        );
+        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#)
+            .bind(noprov_uid)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(noprov_uid)
+            .execute(&pool)
+            .await;
 
         let sso_padded = format!(
             "eyJhbGciOiJIUzI1NiJ9.{}.sig",
-            base64::prelude::BASE64_STANDARD.encode(
-                json!({ "email": "sso_email_only@example.com" }).to_string()
-            )
+            base64::prelude::BASE64_STANDARD
+                .encode(json!({ "email": "sso_email_only@example.com" }).to_string())
         );
-        let res_sso_padded = sso_login(HeaderMap::new(), State(state.clone()), Some(Json(SsoLoginPayload {
-            token: Some(sso_padded),
-            ..Default::default()
-        }))).await;
+        let res_sso_padded = sso_login(
+            HeaderMap::new(),
+            State(state.clone()),
+            Some(Json(SsoLoginPayload {
+                token: Some(sso_padded),
+                ..Default::default()
+            })),
+        )
+        .await;
         assert!(res_sso_padded.is_ok());
-        let padded_uid = Uuid::parse_str(res_sso_padded.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
-        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#).bind(padded_uid).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(padded_uid).execute(&pool).await;
+        let padded_uid =
+            Uuid::parse_str(res_sso_padded.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
+        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#)
+            .bind(padded_uid)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(padded_uid)
+            .execute(&pool)
+            .await;
 
         let sso_sub = format!(
             "eyJhbGciOiJIUzI1NiJ9.{}.sig",
-            base64::prelude::BASE64_STANDARD.encode(
-                json!({ "sub": "sso_sub_user" }).to_string()
-            )
+            base64::prelude::BASE64_STANDARD.encode(json!({ "sub": "sso_sub_user" }).to_string())
         );
-        let res_sso_sub = sso_login(HeaderMap::new(), State(state.clone()), Some(Json(SsoLoginPayload {
-            id_token: Some(sso_sub),
-            ..Default::default()
-        }))).await;
+        let res_sso_sub = sso_login(
+            HeaderMap::new(),
+            State(state.clone()),
+            Some(Json(SsoLoginPayload {
+                id_token: Some(sso_sub),
+                ..Default::default()
+            })),
+        )
+        .await;
         assert!(res_sso_sub.is_ok());
-        let sub_uid = Uuid::parse_str(res_sso_sub.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
-        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#).bind(sub_uid).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(sub_uid).execute(&pool).await;
+        let sub_uid =
+            Uuid::parse_str(res_sso_sub.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
+        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#)
+            .bind(sub_uid)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(sub_uid)
+            .execute(&pool)
+            .await;
 
-        assert!(sso_login(HeaderMap::new(), State(state.clone()), Some(Json(SsoLoginPayload {
-            token: Some("no_dots_token".into()),
-            ..Default::default()
-        }))).await.is_err());
-        assert!(sso_login(HeaderMap::new(), State(state.clone()), Some(Json(SsoLoginPayload {
-            token: Some("header.".into()),
-            ..Default::default()
-        }))).await.is_err());
-        assert!(sso_login(HeaderMap::new(), State(state.clone()), Some(Json(SsoLoginPayload {
-            token: Some("header.!!!invalid_base64!!!.sig".into()),
-            ..Default::default()
-        }))).await.is_err());
-        assert!(sso_login(HeaderMap::new(), State(state.clone()), Some(Json(SsoLoginPayload {
-            token: Some("header.bm90X2pzb24.sig".into()),
-            ..Default::default()
-        }))).await.is_err());
-        assert!(sso_login(HeaderMap::new(), State(state.clone()), Some(Json(SsoLoginPayload {
-            token: Some("header.e30.sig".into()),
-            ..Default::default()
-        }))).await.is_err());
+        assert!(
+            sso_login(
+                HeaderMap::new(),
+                State(state.clone()),
+                Some(Json(SsoLoginPayload {
+                    token: Some("no_dots_token".into()),
+                    ..Default::default()
+                }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            sso_login(
+                HeaderMap::new(),
+                State(state.clone()),
+                Some(Json(SsoLoginPayload {
+                    token: Some("header.".into()),
+                    ..Default::default()
+                }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            sso_login(
+                HeaderMap::new(),
+                State(state.clone()),
+                Some(Json(SsoLoginPayload {
+                    token: Some("header.!!!invalid_base64!!!.sig".into()),
+                    ..Default::default()
+                }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            sso_login(
+                HeaderMap::new(),
+                State(state.clone()),
+                Some(Json(SsoLoginPayload {
+                    token: Some("header.bm90X2pzb24.sig".into()),
+                    ..Default::default()
+                }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            sso_login(
+                HeaderMap::new(),
+                State(state.clone()),
+                Some(Json(SsoLoginPayload {
+                    token: Some("header.e30.sig".into()),
+                    ..Default::default()
+                }))
+            )
+            .await
+            .is_err()
+        );
 
         let ghost_uid = Uuid::now_v7();
         let ghost_sso_sub = format!("ghost_user_{}", ghost_uid.simple());
@@ -1082,33 +1263,57 @@ mod tests {
 
         let ghost_jwt = format!(
             "eyJhbGciOiJIUzI1NiJ9.{}.sig",
-            base64::prelude::BASE64_STANDARD.encode(
-                json!({ "sub": ghost_sso_sub }).to_string()
-            )
+            base64::prelude::BASE64_STANDARD.encode(json!({ "sub": ghost_sso_sub }).to_string())
         );
-        let res_ghost = sso_login(HeaderMap::new(), State(state.clone()), Some(Json(SsoLoginPayload {
-            token: Some(ghost_jwt),
-            provider: Some("ghost_prov".into()),
-            ..Default::default()
-        }))).await;
+        let res_ghost = sso_login(
+            HeaderMap::new(),
+            State(state.clone()),
+            Some(Json(SsoLoginPayload {
+                token: Some(ghost_jwt),
+                provider: Some("ghost_prov".into()),
+                ..Default::default()
+            })),
+        )
+        .await;
         assert!(res_ghost.is_ok());
         let ghost_resp = res_ghost.unwrap().0;
         assert_eq!(ghost_resp["user"]["role"], "view-only");
-        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#).bind(ghost_uid).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#)
+            .bind(ghost_uid)
+            .execute(&pool)
+            .await;
 
         let mut custom_hdr_map = HeaderMap::new();
         custom_hdr_map.insert("x-remote-user", HeaderValue::from_static("hdr_user"));
         let res_sso_hdr = sso_login(custom_hdr_map, State(state.clone()), None).await;
         assert!(res_sso_hdr.is_ok());
-        let hdr_uid = Uuid::parse_str(res_sso_hdr.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
-        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#).bind(hdr_uid).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(hdr_uid).execute(&pool).await;
+        let hdr_uid =
+            Uuid::parse_str(res_sso_hdr.unwrap().0["user"]["id"].as_str().unwrap()).unwrap();
+        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#)
+            .bind(hdr_uid)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(hdr_uid)
+            .execute(&pool)
+            .await;
 
-        let res_sso_wrap = sso(HeaderMap::new(), State(state.clone()), Some(Json(sso_payload))).await;
+        let res_sso_wrap = sso(
+            HeaderMap::new(),
+            State(state.clone()),
+            Some(Json(sso_payload)),
+        )
+        .await;
         assert!(res_sso_wrap.is_ok());
 
-        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#).bind(sso_uid).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(sso_uid).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "user_external_auth" WHERE user_id = $1"#)
+            .bind(sso_uid)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(sso_uid)
+            .execute(&pool)
+            .await;
 
         let cfg_oidc = sso_config_with_lookup(&|k| match k {
             "OIDC_ISSUER_URL" => Some("https://auth.example.com".into()),
@@ -1140,16 +1345,39 @@ mod tests {
         let fake_uid = Uuid::now_v7();
         let fake_tok = make_token(fake_uid, "ghost", "user");
         let mut ghost_headers = HeaderMap::new();
-        ghost_headers.insert("authorization", HeaderValue::from_str(&format!("Bearer {fake_tok}")).unwrap());
-        let res_ghost = verify(ghost_headers.clone(), State(state.clone())).await.unwrap();
+        ghost_headers.insert(
+            "authorization",
+            HeaderValue::from_str(&format!("Bearer {fake_tok}")).unwrap(),
+        );
+        let res_ghost = verify(ghost_headers.clone(), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_ghost.0["username"], "ghost");
 
         let mut spam_headers = HeaderMap::new();
         spam_headers.insert("x-forwarded-for", HeaderValue::from_static("10.99.99.99"));
         for _ in 0..10 {
-            let _ = login(spam_headers.clone(), State(state.clone()), Json(LoginBody { username: "x".into(), password: "p".into(), totp: None })).await;
+            let _ = login(
+                spam_headers.clone(),
+                State(state.clone()),
+                Json(LoginBody {
+                    username: "x".into(),
+                    password: "p".into(),
+                    totp: None,
+                }),
+            )
+            .await;
         }
-        let res_rate = login(spam_headers.clone(), State(state.clone()), Json(LoginBody { username: "x".into(), password: "p".into(), totp: None })).await;
+        let res_rate = login(
+            spam_headers.clone(),
+            State(state.clone()),
+            Json(LoginBody {
+                username: "x".into(),
+                password: "p".into(),
+                totp: None,
+            }),
+        )
+        .await;
         assert!(res_rate.is_err());
         assert_eq!(res_rate.unwrap_err().0, StatusCode::TOO_MANY_REQUESTS);
 
@@ -1173,8 +1401,24 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(login(headers.clone(), State(err_state.clone()), Json(LoginBody { username: username.clone(), password: password.into(), totp: None })).await.is_err());
-        assert!(verify(ghost_headers.clone(), State(err_state.clone())).await.is_err());
+        assert!(
+            login(
+                headers.clone(),
+                State(err_state.clone()),
+                Json(LoginBody {
+                    username: username.clone(),
+                    password: password.into(),
+                    totp: None
+                })
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            verify(ghost_headers.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 
     #[test]

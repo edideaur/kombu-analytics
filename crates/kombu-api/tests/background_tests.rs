@@ -224,7 +224,8 @@ async fn test_evaluate_alerts_once_and_retention_purge() {
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
     handle_int.abort();
 
-    let handle_secs = kombu_api::background::start_background_tasks_with_intervals(pool.clone(), 1, 1);
+    let handle_secs =
+        kombu_api::background::start_background_tasks_with_intervals(pool.clone(), 1, 1);
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     handle_secs.abort();
 
@@ -279,7 +280,13 @@ async fn test_evaluate_alerts_once_and_retention_purge() {
     closed_pool.close().await;
     kombu_api::background::evaluate_alerts_once(&closed_pool).await;
     kombu_api::background::run_retention_purge_once(&closed_pool).await;
-    let (ev, sess) = kombu_api::background::purge_site_retention(&closed_pool, website_id, 1, chrono::Utc::now()).await;
+    let (ev, sess) = kombu_api::background::purge_site_retention(
+        &closed_pool,
+        website_id,
+        1,
+        chrono::Utc::now(),
+    )
+    .await;
     assert_eq!(ev, 0);
     assert_eq!(sess, 0);
 }

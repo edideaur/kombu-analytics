@@ -120,14 +120,13 @@ mod tests {
         };
 
         let website_id = Uuid::now_v7();
-        let _ = sqlx::query(
-            r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#,
-        )
-        .bind(website_id)
-        .bind("Segment Test Web")
-        .bind(format!("seg-{website_id}.com"))
-        .execute(&pool)
-        .await;
+        let _ =
+            sqlx::query(r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#)
+                .bind(website_id)
+                .bind("Segment Test Web")
+                .bind(format!("seg-{website_id}.com"))
+                .execute(&pool)
+                .await;
 
         let res_create = create(
             Path(website_id),
@@ -140,7 +139,11 @@ mod tests {
         )
         .await;
         assert!(res_create.is_ok());
-        let seg_id: Uuid = res_create.unwrap().0["id"].as_str().unwrap().parse().unwrap();
+        let seg_id: Uuid = res_create.unwrap().0["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
 
         let res_list = list(Path(website_id), State(state.clone())).await;
         assert!(res_list.is_ok());
@@ -148,7 +151,10 @@ mod tests {
         let res_del = delete(Path((website_id, seg_id)), State(state.clone())).await;
         assert!(res_del.is_ok());
 
-        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#).bind(website_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
+            .bind(website_id)
+            .execute(&pool)
+            .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -161,8 +167,20 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(list(Path(website_id), State(err_state.clone())).await.is_err());
-        assert!(create(Path(website_id), State(err_state.clone()), Json(json!({}))).await.is_err());
-        assert!(delete(Path((website_id, seg_id)), State(err_state.clone())).await.is_err());
+        assert!(
+            list(Path(website_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            create(Path(website_id), State(err_state.clone()), Json(json!({})))
+                .await
+                .is_err()
+        );
+        assert!(
+            delete(Path((website_id, seg_id)), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 }

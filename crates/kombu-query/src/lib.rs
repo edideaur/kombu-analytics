@@ -269,7 +269,10 @@ pub async fn get_metrics_clickhouse(
     );
 
     let rows: Vec<ClickHouseMetricRow> = client.query_json(&sql).await?;
-    Ok(rows.into_iter().map(|r| MetricCount { x: r.x, y: r.y }).collect())
+    Ok(rows
+        .into_iter()
+        .map(|r| MetricCount { x: r.x, y: r.y })
+        .collect())
 }
 
 pub async fn get_website_stats_with_engine(
@@ -490,16 +493,16 @@ pub async fn get_expanded_metrics(
 
     Ok(rows
         .into_iter()
-        .map(|(name, pageviews, visitors, visits, bounces, totaltime)| {
-            ExpandedMetricData {
+        .map(
+            |(name, pageviews, visitors, visits, bounces, totaltime)| ExpandedMetricData {
                 name,
                 pageviews,
                 visitors,
                 visits,
                 bounces,
                 totaltime,
-            }
-        })
+            },
+        )
         .collect())
 }
 
@@ -1010,7 +1013,11 @@ pub async fn get_session_activity(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::manual_let_else, clippy::items_after_statements)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::manual_let_else,
+    clippy::items_after_statements
+)]
 mod tests {
     use super::*;
     use chrono::Duration;
@@ -1181,7 +1188,7 @@ mod tests {
             .unwrap();
         assert!(miss.is_none());
 
-        use axum::{routing::post, Router, response::IntoResponse};
+        use axum::{Router, response::IntoResponse, routing::post};
         let app = Router::new().route(
             "/",
             post(|body: String| async move {
@@ -1195,7 +1202,8 @@ mod tests {
             }),
         );
         let (port, shutdown_tx, server_handle) = spawn_test_server(app).await;
-        let ch_cfg = ClickHouseConfig::from_url(&format!("http://127.0.0.1:{port}/kombu_test")).unwrap();
+        let ch_cfg =
+            ClickHouseConfig::from_url(&format!("http://127.0.0.1:{port}/kombu_test")).unwrap();
         let ch_client = ClickHouseClient::new(ch_cfg);
 
         for eng in [
@@ -1229,11 +1237,17 @@ mod tests {
             assert!(m_eng.is_ok());
         }
 
-        let ch_stats_direct = get_website_stats_clickhouse(&ch_client, website_id, start_at, end_at).await.unwrap();
+        let ch_stats_direct =
+            get_website_stats_clickhouse(&ch_client, website_id, start_at, end_at)
+                .await
+                .unwrap();
         assert_eq!(ch_stats_direct.pageviews, 15);
         assert_eq!(ch_stats_direct.visitors, 7);
 
-        let ch_metrics_direct = get_metrics_clickhouse(&ch_client, website_id, start_at, end_at, "url", 10).await.unwrap();
+        let ch_metrics_direct =
+            get_metrics_clickhouse(&ch_client, website_id, start_at, end_at, "url", 10)
+                .await
+                .unwrap();
         assert_eq!(ch_metrics_direct.len(), 2);
         assert_eq!(ch_metrics_direct[0].x, "/docs");
 
@@ -1263,13 +1277,22 @@ mod tests {
         let empty_client = ClickHouseClient::new(
             ClickHouseConfig::from_url(&format!("http://127.0.0.1:{empty_port}")).unwrap(),
         );
-        let empty_stats =
-            get_website_stats_clickhouse(&empty_client, website_id, start_at, end_at)
-                .await
-                .unwrap();
+        let empty_stats = get_website_stats_clickhouse(&empty_client, website_id, start_at, end_at)
+            .await
+            .unwrap();
         assert_eq!(empty_stats.pageviews, 0);
 
-        for m in ["referrer", "browser", "os", "device", "country", "event", "host", "hostname", "unknown_other"] {
+        for m in [
+            "referrer",
+            "browser",
+            "os",
+            "device",
+            "country",
+            "event",
+            "host",
+            "hostname",
+            "unknown_other",
+        ] {
             let _ = get_metrics_clickhouse(&ch_client, website_id, start_at, end_at, m, 5).await;
         }
 
@@ -1279,8 +1302,16 @@ mod tests {
         let dead_cfg =
             ClickHouseConfig::from_url(&format!("http://127.0.0.1:{dead_port}/db")).unwrap();
         let dead = ClickHouseClient::new(dead_cfg);
-        assert!(get_website_stats_clickhouse(&dead, website_id, start_at, end_at).await.is_err());
-        assert!(get_metrics_clickhouse(&dead, website_id, start_at, end_at, "url", 5).await.is_err());
+        assert!(
+            get_website_stats_clickhouse(&dead, website_id, start_at, end_at)
+                .await
+                .is_err()
+        );
+        assert!(
+            get_metrics_clickhouse(&dead, website_id, start_at, end_at, "url", 5)
+                .await
+                .is_err()
+        );
         assert!(
             get_website_stats_with_engine(
                 StorageEngine::Clickhouse,

@@ -74,7 +74,9 @@ async fn test_share_full_crud_and_slug_routing() {
         .await
         .unwrap();
     assert_eq!(res_create.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let share: Value = serde_json::from_slice(&bytes).unwrap();
     let share_id = share["id"].as_str().unwrap();
 
@@ -313,7 +315,9 @@ async fn test_share_full_crud_and_slug_routing() {
                 .uri(format!("/api/boards/{entity_id}/shares"))
                 .header(admin_k, &admin_v)
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "slug": board_slug.clone() }).to_string()))
+                .body(Body::from(
+                    json!({ "slug": board_slug.clone() }).to_string(),
+                ))
                 .unwrap(),
         )
         .await
@@ -365,7 +369,9 @@ async fn test_share_full_crud_and_slug_routing() {
                 .uri(format!("/api/pixels/{entity_id}/shares"))
                 .header(admin_k, &admin_v)
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "slug": pixel_slug.clone() }).to_string()))
+                .body(Body::from(
+                    json!({ "slug": pixel_slug.clone() }).to_string(),
+                ))
                 .unwrap(),
         )
         .await

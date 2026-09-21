@@ -61,21 +61,35 @@ pub fn parse_plausible_csv(content: &str) -> anyhow::Result<Vec<PlausibleCsvRow>
     let col_time = headers.iter().position(|h| h == "time");
     let col_page = headers
         .iter()
-        .position(|h| h == "page" || h == "page_path" || h == "url_path" || h == "path" || h == "url")
+        .position(|h| {
+            h == "page" || h == "page_path" || h == "url_path" || h == "path" || h == "url"
+        })
         .context("Missing 'page' or 'url' column in Plausible CSV header")?;
-    let col_entry = headers.iter().position(|h| h == "entry_page" || h == "entry");
+    let col_entry = headers
+        .iter()
+        .position(|h| h == "entry_page" || h == "entry");
     let col_exit = headers.iter().position(|h| h == "exit_page" || h == "exit");
     let col_bounce = headers.iter().position(|h| h == "bounce" || h == "bounced");
-    let col_duration = headers.iter().position(|h| h == "visit_duration" || h == "duration");
-    let col_referrer = headers.iter().position(|h| h == "referrer" || h == "referrer_domain");
-    let col_source = headers.iter().position(|h| h == "source" || h == "utm_source");
+    let col_duration = headers
+        .iter()
+        .position(|h| h == "visit_duration" || h == "duration");
+    let col_referrer = headers
+        .iter()
+        .position(|h| h == "referrer" || h == "referrer_domain");
+    let col_source = headers
+        .iter()
+        .position(|h| h == "source" || h == "utm_source");
     let col_country = headers.iter().position(|h| h == "country");
     let col_region = headers.iter().position(|h| h == "region");
     let col_city = headers.iter().position(|h| h == "city");
     let col_device = headers.iter().position(|h| h == "device");
     let col_browser = headers.iter().position(|h| h == "browser");
-    let col_os = headers.iter().position(|h| h == "os" || h == "operating_system");
-    let col_event = headers.iter().position(|h| h == "event_name" || h == "name" || h == "goal");
+    let col_os = headers
+        .iter()
+        .position(|h| h == "os" || h == "operating_system");
+    let col_event = headers
+        .iter()
+        .position(|h| h == "event_name" || h == "name" || h == "goal");
 
     let mut rows = Vec::new();
     for line in lines {
@@ -303,16 +317,26 @@ invalid_date_only,,/bad-date-only,,,,
         let count = import_plausible_csv(&pool, website_id, csv).await.unwrap();
         assert_eq!(count, 6);
 
-        let empty_count = import_plausible_csv(&pool, website_id, "page\n").await.unwrap();
+        let empty_count = import_plausible_csv(&pool, website_id, "page\n")
+            .await
+            .unwrap();
         assert_eq!(empty_count, 0);
 
-        assert!(import_plausible_csv(&pool, website_id, "invalid_no_page_header\nfoo\n").await.is_err());
+        assert!(
+            import_plausible_csv(&pool, website_id, "invalid_no_page_header\nfoo\n")
+                .await
+                .is_err()
+        );
 
         let closed_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://kombu:kombu@localhost:5432/kombu")
             .unwrap();
         closed_pool.close().await;
-        assert!(import_plausible_csv(&closed_pool, website_id, "page\n/home\n").await.is_err());
+        assert!(
+            import_plausible_csv(&closed_pool, website_id, "page\n/home\n")
+                .await
+                .is_err()
+        );
 
         let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
             .bind(website_id)

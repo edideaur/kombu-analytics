@@ -100,48 +100,42 @@ pub async fn evaluate_alerts_once(pool: &PgPool) {
             count as f64
         } else if alert_type == "performance_budget" {
             let avg = match metric_str {
-                "cls" => {
-                    sqlx::query_scalar::<_, Option<f64>>(
-                        r#"
+                "cls" => sqlx::query_scalar::<_, Option<f64>>(
+                    r#"
                         SELECT AVG(cls::float8)
                         FROM "website_event"
                         WHERE website_id = $1 AND cls IS NOT NULL AND created_at >= $2
                         "#,
-                    )
-                    .bind(website_id)
-                    .bind(window_start)
-                    .fetch_one(pool)
-                    .await
-                    .unwrap_or(None)
-                }
-                "inp" => {
-                    sqlx::query_scalar::<_, Option<f64>>(
-                        r#"
+                )
+                .bind(website_id)
+                .bind(window_start)
+                .fetch_one(pool)
+                .await
+                .unwrap_or(None),
+                "inp" => sqlx::query_scalar::<_, Option<f64>>(
+                    r#"
                         SELECT AVG(inp::float8)
                         FROM "website_event"
                         WHERE website_id = $1 AND inp IS NOT NULL AND created_at >= $2
                         "#,
-                    )
-                    .bind(website_id)
-                    .bind(window_start)
-                    .fetch_one(pool)
-                    .await
-                    .unwrap_or(None)
-                }
-                _ => {
-                    sqlx::query_scalar::<_, Option<f64>>(
-                        r#"
+                )
+                .bind(website_id)
+                .bind(window_start)
+                .fetch_one(pool)
+                .await
+                .unwrap_or(None),
+                _ => sqlx::query_scalar::<_, Option<f64>>(
+                    r#"
                         SELECT AVG(lcp::float8)
                         FROM "website_event"
                         WHERE website_id = $1 AND lcp IS NOT NULL AND created_at >= $2
                         "#,
-                    )
-                    .bind(website_id)
-                    .bind(window_start)
-                    .fetch_one(pool)
-                    .await
-                    .unwrap_or(None)
-                }
+                )
+                .bind(website_id)
+                .bind(window_start)
+                .fetch_one(pool)
+                .await
+                .unwrap_or(None),
             };
             avg.unwrap_or(0.0)
         } else {
@@ -356,7 +350,11 @@ pub async fn purge_site_retention(
 }
 
 pub fn start_background_tasks(pool: PgPool) -> tokio::task::JoinHandle<()> {
-    start_background_tasks_with_durations(pool, StdDuration::from_secs(60), StdDuration::from_secs(3600))
+    start_background_tasks_with_durations(
+        pool,
+        StdDuration::from_secs(60),
+        StdDuration::from_secs(3600),
+    )
 }
 
 pub fn start_background_tasks_with_intervals(
@@ -364,7 +362,11 @@ pub fn start_background_tasks_with_intervals(
     alert_secs: u64,
     retention_secs: u64,
 ) -> tokio::task::JoinHandle<()> {
-    start_background_tasks_with_durations(pool, StdDuration::from_secs(alert_secs), StdDuration::from_secs(retention_secs))
+    start_background_tasks_with_durations(
+        pool,
+        StdDuration::from_secs(alert_secs),
+        StdDuration::from_secs(retention_secs),
+    )
 }
 pub fn start_background_tasks_with_durations(
     pool: PgPool,

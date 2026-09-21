@@ -4,11 +4,17 @@ use axum::Json;
 use serde_json::{Map, Value};
 
 pub fn get_with_lookup(get_var: &dyn Fn(&str) -> Option<String>) -> Json<Value> {
-    let cloud_mode = get_var("CLOUD_MODE").is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
-    let private_mode = get_var("PRIVATE_MODE").is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
-    let telemetry_disabled = get_var("DISABLE_TELEMETRY").is_none_or(|v| v == "1" || v.eq_ignore_ascii_case("true"));
-    let updates_disabled = get_var("DISABLE_UPDATES").is_none_or(|v| v == "1" || v.eq_ignore_ascii_case("true"));
-    let tracker_script_name = get_var("TRACKER_SCRIPT_NAME").filter(|s| !s.is_empty()).unwrap_or_else(|| "script.js".to_string());
+    let cloud_mode =
+        get_var("CLOUD_MODE").is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+    let private_mode =
+        get_var("PRIVATE_MODE").is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+    let telemetry_disabled =
+        get_var("DISABLE_TELEMETRY").is_none_or(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+    let updates_disabled =
+        get_var("DISABLE_UPDATES").is_none_or(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+    let tracker_script_name = get_var("TRACKER_SCRIPT_NAME")
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "script.js".to_string());
     let favicon_url = get_var("FAVICON_URL");
     let links_url = get_var("LINKS_URL");
     let pixels_url = get_var("PIXELS_URL");
@@ -27,19 +33,33 @@ pub fn get_with_lookup(get_var: &dyn Fn(&str) -> Option<String>) -> Json<Value> 
         });
     let mut map = Map::new();
     map.insert("cloudMode".into(), Value::Bool(cloud_mode));
-    map.insert("faviconUrl".into(), favicon_url.map_or(Value::Null, Value::String));
-    map.insert("linksUrl".into(), links_url.map_or(Value::Null, Value::String));
-    map.insert("pixelsUrl".into(), pixels_url.map_or(Value::Null, Value::String));
+    map.insert(
+        "faviconUrl".into(),
+        favicon_url.map_or(Value::Null, Value::String),
+    );
+    map.insert(
+        "linksUrl".into(),
+        links_url.map_or(Value::Null, Value::String),
+    );
+    map.insert(
+        "pixelsUrl".into(),
+        pixels_url.map_or(Value::Null, Value::String),
+    );
     map.insert("privateMode".into(), Value::Bool(private_mode));
     map.insert("sessionDeletionEnabled".into(), Value::Bool(true));
     map.insert("storageEngine".into(), Value::String(storage_engine));
     map.insert("telemetryDisabled".into(), Value::Bool(telemetry_disabled));
-    map.insert("trackerScriptName".into(), Value::String(tracker_script_name));
+    map.insert(
+        "trackerScriptName".into(),
+        Value::String(tracker_script_name),
+    );
     map.insert("updatesDisabled".into(), Value::Bool(updates_disabled));
     Json(Value::Object(map))
 }
 
-pub async fn get() -> Json<Value> { get_with_lookup(&|k| std::env::var(k).ok()) }
+pub async fn get() -> Json<Value> {
+    get_with_lookup(&|k| std::env::var(k).ok())
+}
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]

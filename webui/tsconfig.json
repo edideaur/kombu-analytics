@@ -5,8 +5,16 @@
     "jsx": "react-jsx",
     "strict": true,
     "moduleResolution": "bundler",
-    "paths": { "@/*": ["../umami/src/*"] },
+    "skipLibCheck": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@/*": ["../umami/src/*"],
+      "next/navigation": ["./src/shims/next-navigation.ts"],
+      "next/link": ["./src/shims/next-link.tsx"],
+      "next/script": ["./src/shims/next-script.tsx"],
+      "next-intl": ["./src/shims/next-intl.ts"]
+    },
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "../umami/src"]
+  "include": ["src"]
 }

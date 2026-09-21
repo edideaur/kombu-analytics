@@ -599,7 +599,11 @@ pub async fn create_invitation(
     let hours = body["expiresInHours"].as_i64().unwrap_or(168);
     let expires_at = chrono::Utc::now() + chrono::Duration::hours(hours);
 
-    let raw_token = format!("inv_{}_{}", Uuid::now_v7().simple(), Uuid::now_v7().simple());
+    let raw_token = format!(
+        "inv_{}_{}",
+        Uuid::now_v7().simple(),
+        Uuid::now_v7().simple()
+    );
     let token_hash = hash_invitation_token(&raw_token);
     let invitation_id = Uuid::now_v7();
 
@@ -782,7 +786,17 @@ pub async fn accept_invitation_by_token(
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let token_hash = hash_invitation_token(&token);
 
-    let row = sqlx::query_as::<_, (Uuid, Uuid, String, chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>, Option<chrono::DateTime<chrono::Utc>>)>(
+    let row = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            Uuid,
+            String,
+            chrono::DateTime<chrono::Utc>,
+            Option<chrono::DateTime<chrono::Utc>>,
+            Option<chrono::DateTime<chrono::Utc>>,
+        ),
+    >(
         r#"
         SELECT invitation_id, team_id, role, expires_at, accepted_at, revoked_at
         FROM "team_invitation"
@@ -890,9 +904,10 @@ mod tests {
             app_secret: std::sync::Arc::new("kombu-secret".into()),
         };
 
-        let _ = sqlx::query(r#"ALTER TABLE "team_user" DROP CONSTRAINT IF EXISTS "check_test_fail""#)
-            .execute(&pool)
-            .await;
+        let _ =
+            sqlx::query(r#"ALTER TABLE "team_user" DROP CONSTRAINT IF EXISTS "check_test_fail""#)
+                .execute(&pool)
+                .await;
         let _ = sqlx::query(r#"DELETE FROM "user" WHERE username LIKE 'team_%'"#)
             .execute(&pool)
             .await;
@@ -951,21 +966,34 @@ mod tests {
         let team_id = Uuid::parse_str(team_id_str).unwrap();
         let access_code = res_create.0["accessCode"].as_str().unwrap().to_string();
 
-        let res_user_list = list(owner_auth.clone(), State(state.clone())).await.unwrap();
+        let res_user_list = list(owner_auth.clone(), State(state.clone()))
+            .await
+            .unwrap();
         assert!(!res_user_list.0.as_array().unwrap().is_empty());
 
-        let res_admin_list = list(admin_auth.clone(), State(state.clone())).await.unwrap();
+        let res_admin_list = list(admin_auth.clone(), State(state.clone()))
+            .await
+            .unwrap();
         assert!(!res_admin_list.0.as_array().unwrap().is_empty());
 
         let res_join_bad = join(State(state.clone()), Json(json!({}))).await;
         assert!(res_join_bad.is_err());
         assert_eq!(res_join_bad.unwrap_err().0, StatusCode::BAD_REQUEST);
 
-        let res_join_404 = join(State(state.clone()), Json(json!({ "accessCode": "unknown_code" }))).await;
+        let res_join_404 = join(
+            State(state.clone()),
+            Json(json!({ "accessCode": "unknown_code" })),
+        )
+        .await;
         assert!(res_join_404.is_err());
         assert_eq!(res_join_404.unwrap_err().0, StatusCode::NOT_FOUND);
 
-        let res_join_ok = join(State(state.clone()), Json(json!({ "accessCode": access_code }))).await.unwrap();
+        let res_join_ok = join(
+            State(state.clone()),
+            Json(json!({ "accessCode": access_code })),
+        )
+        .await
+        .unwrap();
         assert_eq!(res_join_ok.0["id"], team_id_str);
 
         let res_get = get(Path(team_id), State(state.clone())).await.unwrap();
@@ -1086,30 +1114,20 @@ mod tests {
         let inv1_id: Uuid = res_inv1.0["id"].as_str().unwrap().parse().unwrap();
         let inv1_token = res_inv1.0["token"].as_str().unwrap().to_string();
 
-        let res_list_inv_forbid = list_invitations(
-            outsider_auth.clone(),
-            Path(team_id),
-            State(state.clone()),
-        )
-        .await;
+        let res_list_inv_forbid =
+            list_invitations(outsider_auth.clone(), Path(team_id), State(state.clone())).await;
         assert!(res_list_inv_forbid.is_err());
 
-        let res_list_inv = list_invitations(
-            owner_auth.clone(),
-            Path(team_id),
-            State(state.clone()),
-        )
-        .await
-        .unwrap();
+        let res_list_inv =
+            list_invitations(owner_auth.clone(), Path(team_id), State(state.clone()))
+                .await
+                .unwrap();
         assert!(!res_list_inv.0.as_array().unwrap().is_empty());
 
-        let res_list_inv_admin = list_invitations(
-            admin_auth.clone(),
-            Path(team_id),
-            State(state.clone()),
-        )
-        .await
-        .unwrap();
+        let res_list_inv_admin =
+            list_invitations(admin_auth.clone(), Path(team_id), State(state.clone()))
+                .await
+                .unwrap();
         assert!(!res_list_inv_admin.0.as_array().unwrap().is_empty());
 
         let res_inv_admin = create_invitation(
@@ -1144,11 +1162,15 @@ mod tests {
         )
         .await;
         assert!(res_accept_fail.is_err());
-        assert_eq!(res_accept_fail.unwrap_err().0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            res_accept_fail.unwrap_err().0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
 
-        let _ = sqlx::query(r#"ALTER TABLE "team_user" DROP CONSTRAINT IF EXISTS "check_test_fail""#)
-            .execute(&pool)
-            .await;
+        let _ =
+            sqlx::query(r#"ALTER TABLE "team_user" DROP CONSTRAINT IF EXISTS "check_test_fail""#)
+                .execute(&pool)
+                .await;
 
         let res_rev_admin = revoke_invitation(
             admin_auth.clone(),
@@ -1159,20 +1181,16 @@ mod tests {
         .unwrap();
         assert_eq!(res_rev_admin.0["ok"], true);
 
-        let res_get_inv_404 = get_invitation_by_token(
-            Path("nonexistent_inv_token".into()),
-            State(state.clone()),
-        )
-        .await;
+        let res_get_inv_404 =
+            get_invitation_by_token(Path("nonexistent_inv_token".into()), State(state.clone()))
+                .await;
         assert!(res_get_inv_404.is_err());
         assert_eq!(res_get_inv_404.unwrap_err().0, StatusCode::NOT_FOUND);
 
-        let res_get_inv_ok = get_invitation_by_token(
-            Path(inv1_token.clone()),
-            State(state.clone()),
-        )
-        .await
-        .unwrap();
+        let res_get_inv_ok =
+            get_invitation_by_token(Path(inv1_token.clone()), State(state.clone()))
+                .await
+                .unwrap();
         assert_eq!(res_get_inv_ok.0["teamId"], team_id.to_string());
 
         let res_accept = accept_invitation_by_token(
@@ -1276,22 +1294,14 @@ mod tests {
         assert!(res_accept_404.is_err());
         assert_eq!(res_accept_404.unwrap_err().0, StatusCode::NOT_FOUND);
 
-        let res_del_team_forbid = delete(
-            outsider_auth.clone(),
-            Path(team_id),
-            State(state.clone()),
-        )
-        .await;
+        let res_del_team_forbid =
+            delete(outsider_auth.clone(), Path(team_id), State(state.clone())).await;
         assert!(res_del_team_forbid.is_err());
         assert_eq!(res_del_team_forbid.unwrap_err().0, StatusCode::FORBIDDEN);
 
-        let res_del_team_ok = delete(
-            owner_auth.clone(),
-            Path(team_id),
-            State(state.clone()),
-        )
-        .await
-        .unwrap();
+        let res_del_team_ok = delete(owner_auth.clone(), Path(team_id), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_del_team_ok.0["ok"], true);
 
         let _ = sqlx::query(r#"DELETE FROM "team_invitation" WHERE team_id = $1"#)
@@ -1320,30 +1330,177 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(list(owner_auth.clone(), State(err_state.clone())).await.is_err());
-        assert!(list(admin_auth.clone(), State(err_state.clone())).await.is_err());
-        assert!(create(owner_auth.clone(), State(err_state.clone()), Json(json!({ "name": "Team Fail" }))).await.is_err());
-        assert!(join(State(err_state.clone()), Json(json!({ "accessCode": "code" }))).await.is_err());
+        assert!(
+            list(owner_auth.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            list(admin_auth.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            create(
+                owner_auth.clone(),
+                State(err_state.clone()),
+                Json(json!({ "name": "Team Fail" }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            join(
+                State(err_state.clone()),
+                Json(json!({ "accessCode": "code" }))
+            )
+            .await
+            .is_err()
+        );
         assert!(get(Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(update(Path(team_id), State(err_state.clone()), Json(json!({ "name": "Team Fail" }))).await.is_err());
-        assert!(delete(owner_auth.clone(), Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(delete(admin_auth.clone(), Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(add_user(owner_auth.clone(), Path(team_id), State(err_state.clone()), Json(json!({ "userId": member_id.to_string(), "role": "team-member" }))).await.is_err());
-        assert!(add_user(admin_auth.clone(), Path(team_id), State(err_state.clone()), Json(json!({ "userId": member_id.to_string(), "role": "team-member" }))).await.is_err());
-        assert!(delete_user(owner_auth.clone(), Path((team_id, member_id)), State(err_state.clone())).await.is_err());
-        assert!(delete_user(admin_auth.clone(), Path((team_id, member_id)), State(err_state.clone())).await.is_err());
-        assert!(users(Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(websites(Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(boards(Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(pixels(Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(links(Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(create_invitation(owner_auth.clone(), Path(team_id), State(err_state.clone()), Json(json!({}))).await.is_err());
-        assert!(create_invitation(admin_auth.clone(), Path(team_id), State(err_state.clone()), Json(json!({}))).await.is_err());
-        assert!(list_invitations(owner_auth.clone(), Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(list_invitations(admin_auth.clone(), Path(team_id), State(err_state.clone())).await.is_err());
-        assert!(revoke_invitation(owner_auth.clone(), Path((team_id, inv1_id)), State(err_state.clone())).await.is_err());
-        assert!(revoke_invitation(admin_auth.clone(), Path((team_id, inv1_id)), State(err_state.clone())).await.is_err());
-        assert!(get_invitation_by_token(Path("any".into()), State(err_state.clone())).await.is_err());
-        assert!(accept_invitation_by_token(owner_auth.clone(), Path("any".into()), State(err_state.clone())).await.is_err());
+        assert!(
+            update(
+                Path(team_id),
+                State(err_state.clone()),
+                Json(json!({ "name": "Team Fail" }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete(owner_auth.clone(), Path(team_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            delete(admin_auth.clone(), Path(team_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            add_user(
+                owner_auth.clone(),
+                Path(team_id),
+                State(err_state.clone()),
+                Json(json!({ "userId": member_id.to_string(), "role": "team-member" }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            add_user(
+                admin_auth.clone(),
+                Path(team_id),
+                State(err_state.clone()),
+                Json(json!({ "userId": member_id.to_string(), "role": "team-member" }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete_user(
+                owner_auth.clone(),
+                Path((team_id, member_id)),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete_user(
+                admin_auth.clone(),
+                Path((team_id, member_id)),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            users(Path(team_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            websites(Path(team_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            boards(Path(team_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            pixels(Path(team_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            links(Path(team_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            create_invitation(
+                owner_auth.clone(),
+                Path(team_id),
+                State(err_state.clone()),
+                Json(json!({}))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            create_invitation(
+                admin_auth.clone(),
+                Path(team_id),
+                State(err_state.clone()),
+                Json(json!({}))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            list_invitations(owner_auth.clone(), Path(team_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            list_invitations(admin_auth.clone(), Path(team_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            revoke_invitation(
+                owner_auth.clone(),
+                Path((team_id, inv1_id)),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            revoke_invitation(
+                admin_auth.clone(),
+                Path((team_id, inv1_id)),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            get_invitation_by_token(Path("any".into()), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            accept_invitation_by_token(
+                owner_auth.clone(),
+                Path("any".into()),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
     }
 }

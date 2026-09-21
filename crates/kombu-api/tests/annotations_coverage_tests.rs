@@ -59,7 +59,9 @@ async fn test_annotations_crud_lifecycle() {
         .await
         .unwrap();
     assert_eq!(res_create.status(), StatusCode::CREATED);
-    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let created: Value = serde_json::from_slice(&bytes).unwrap();
     let annotation_id = created["id"].as_str().unwrap();
 

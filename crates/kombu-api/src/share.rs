@@ -317,7 +317,9 @@ pub async fn update_by_id(
     };
 
     if let Some(ref mut p) = parameters {
-        if let (None, Some(existing_aliases)) = (p.get("aliases"), current_parameters.get("aliases")) {
+        if let (None, Some(existing_aliases)) =
+            (p.get("aliases"), current_parameters.get("aliases"))
+        {
             p["aliases"] = existing_aliases.clone();
         }
     }
@@ -655,10 +657,14 @@ mod tests {
         let res_list = list(State(state.clone())).await.unwrap();
         assert!(!res_list.0.as_array().unwrap().is_empty());
 
-        let res_entity_shares = get_entity_shares(Path(entity_id), State(state.clone())).await.unwrap();
+        let res_entity_shares = get_entity_shares(Path(entity_id), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_entity_shares.0["count"], 1);
 
-        let res_get_id = get_by_id(Path(share_id), State(state.clone())).await.unwrap();
+        let res_get_id = get_by_id(Path(share_id), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_get_id.0["name"], "Initial Share");
 
         let res_get_id_404 = get_by_id(Path(Uuid::now_v7()), State(state.clone())).await;
@@ -818,7 +824,10 @@ mod tests {
         )
         .await;
         assert!(res_up_db_err.is_err());
-        assert_eq!(res_up_db_err.unwrap_err().0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            res_up_db_err.unwrap_err().0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
 
         let res_cr_db_err = create(
             State(state.clone()),
@@ -830,7 +839,10 @@ mod tests {
         )
         .await;
         assert!(res_cr_db_err.is_err());
-        assert_eq!(res_cr_db_err.unwrap_err().0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            res_cr_db_err.unwrap_err().0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
 
         let res_by_new_slug = get_by_slug(Path(updated_slug.clone()), State(state.clone()))
             .await
@@ -877,7 +889,9 @@ mod tests {
         )
         .await
         .unwrap();
-        let res_b_slug = get_by_slug(Path(b_slug), State(state.clone())).await.unwrap();
+        let res_b_slug = get_by_slug(Path(b_slug), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_b_slug.0["boardId"], b_id.to_string());
         assert_eq!(res_b_slug.0["websiteIds"], json!(["w1", "w2"]));
         assert_eq!(res_b_slug.0["pixelIds"], json!(["p1", "p2"]));
@@ -896,7 +910,9 @@ mod tests {
         )
         .await
         .unwrap();
-        let res_b2_slug = get_by_slug(Path(b2_slug), State(state.clone())).await.unwrap();
+        let res_b2_slug = get_by_slug(Path(b2_slug), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_b2_slug.0["boardId"], b2_id.to_string());
 
         let b3_id = Uuid::now_v7();
@@ -912,7 +928,9 @@ mod tests {
         )
         .await
         .unwrap();
-        let res_b3_slug = get_by_slug(Path(b3_slug), State(state.clone())).await.unwrap();
+        let res_b3_slug = get_by_slug(Path(b3_slug), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_b3_slug.0["boardId"], b3_id.to_string());
 
         let w_id = Uuid::now_v7();
@@ -933,7 +951,9 @@ mod tests {
         )
         .await
         .unwrap();
-        let res_l_slug = get_by_slug(Path(l_slug), State(state.clone())).await.unwrap();
+        let res_l_slug = get_by_slug(Path(l_slug), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_l_slug.0["linkId"], l_id.to_string());
 
         let p_id = Uuid::now_v7();
@@ -945,7 +965,9 @@ mod tests {
         )
         .await
         .unwrap();
-        let res_p_slug = get_by_slug(Path(p_slug), State(state.clone())).await.unwrap();
+        let res_p_slug = get_by_slug(Path(p_slug), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_p_slug.0["pixelId"], p_id.to_string());
 
         let other_share_id = Uuid::now_v7();
@@ -956,26 +978,39 @@ mod tests {
             .bind(&other_type_slug)
             .execute(&pool)
             .await;
-        let res_other_slug = get_by_slug(Path(other_type_slug), State(state.clone())).await.unwrap();
+        let res_other_slug = get_by_slug(Path(other_type_slug), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_other_slug.0["shareType"], 99);
 
-        let res_slug_404 = get_by_slug(Path("nonexistent_share_slug_xyz".into()), State(state.clone())).await;
+        let res_slug_404 = get_by_slug(
+            Path("nonexistent_share_slug_xyz".into()),
+            State(state.clone()),
+        )
+        .await;
         assert!(res_slug_404.is_err());
         assert_eq!(res_slug_404.unwrap_err().0, StatusCode::NOT_FOUND);
 
-        let res_del = delete_by_id(Path(share_id), State(state.clone())).await.unwrap();
+        let res_del = delete_by_id(Path(share_id), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_del.0["ok"], true);
 
-        let _ = sqlx::query(r#"DELETE FROM "board" WHERE board_id = $1"#).bind(b_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "share" WHERE entity_id IN ($1, $2, $3, $4, $5) OR share_id = $6"#)
-            .bind(entity_id)
+        let _ = sqlx::query(r#"DELETE FROM "board" WHERE board_id = $1"#)
             .bind(b_id)
-            .bind(w_id)
-            .bind(l_id)
-            .bind(p_id)
-            .bind(other_share_id)
             .execute(&pool)
             .await;
+        let _ = sqlx::query(
+            r#"DELETE FROM "share" WHERE entity_id IN ($1, $2, $3, $4, $5) OR share_id = $6"#,
+        )
+        .bind(entity_id)
+        .bind(b_id)
+        .bind(w_id)
+        .bind(l_id)
+        .bind(p_id)
+        .bind(other_share_id)
+        .execute(&pool)
+        .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -989,11 +1024,42 @@ mod tests {
         };
 
         assert!(list(State(err_state.clone())).await.is_err());
-        assert!(get_entity_shares(Path(entity_id), State(err_state.clone())).await.is_ok());
-        assert!(create(State(err_state.clone()), Json(json!({ "entityId": entity_id.to_string(), "name": "Fail" }))).await.is_err());
-        assert!(get_by_id(Path(share_id), State(err_state.clone())).await.is_err());
-        assert!(update_by_id(Path(share_id), State(err_state.clone()), Json(json!({ "name": "Fail" }))).await.is_err());
-        assert!(delete_by_id(Path(share_id), State(err_state.clone())).await.is_err());
-        assert!(get_by_slug(Path("any".into()), State(err_state.clone())).await.is_err());
+        assert!(
+            get_entity_shares(Path(entity_id), State(err_state.clone()))
+                .await
+                .is_ok()
+        );
+        assert!(
+            create(
+                State(err_state.clone()),
+                Json(json!({ "entityId": entity_id.to_string(), "name": "Fail" }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            get_by_id(Path(share_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            update_by_id(
+                Path(share_id),
+                State(err_state.clone()),
+                Json(json!({ "name": "Fail" }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete_by_id(Path(share_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            get_by_slug(Path("any".into()), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 }

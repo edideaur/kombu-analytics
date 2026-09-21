@@ -175,7 +175,18 @@ pub async fn user_two_factor(
     Path(user_id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let row = sqlx::query_scalar::<_, bool>("SELECT COALESCE(is_enabled, false) FROM two_factor_auth WHERE user_id = $1").bind(user_id).fetch_optional(&state.pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let row = sqlx::query_scalar::<_, bool>(
+        "SELECT COALESCE(is_enabled, false) FROM two_factor_auth WHERE user_id = $1",
+    )
+    .bind(user_id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+    })?;
     Ok(Json(json!({ "isEnabled": row.unwrap_or(false) })))
 }
 
@@ -185,7 +196,17 @@ pub async fn update_user_two_factor(
     State(state): State<AppState>,
     Json(payload): Json<TwoFactorRequiredPayload>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    sqlx::query("UPDATE \"user\" SET two_factor_required = $1 WHERE user_id = $2").bind(payload.required).bind(user_id).execute(&state.pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    sqlx::query("UPDATE \"user\" SET two_factor_required = $1 WHERE user_id = $2")
+        .bind(payload.required)
+        .bind(user_id)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+        })?;
     Ok(Json(json!({ "ok": true, "required": payload.required })))
 }
 
@@ -194,7 +215,18 @@ pub async fn team_two_factor(
     Path(team_id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let row = sqlx::query_scalar::<_, bool>("SELECT COALESCE(two_factor_required, false) FROM \"team\" WHERE team_id = $1").bind(team_id).fetch_optional(&state.pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let row = sqlx::query_scalar::<_, bool>(
+        "SELECT COALESCE(two_factor_required, false) FROM \"team\" WHERE team_id = $1",
+    )
+    .bind(team_id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+    })?;
     Ok(Json(json!({ "required": row.unwrap_or(false) })))
 }
 
@@ -204,7 +236,17 @@ pub async fn update_team_two_factor(
     State(state): State<AppState>,
     Json(payload): Json<TwoFactorRequiredPayload>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    sqlx::query("UPDATE \"team\" SET two_factor_required = $1 WHERE team_id = $2").bind(payload.required).bind(team_id).execute(&state.pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    sqlx::query("UPDATE \"team\" SET two_factor_required = $1 WHERE team_id = $2")
+        .bind(payload.required)
+        .bind(team_id)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+        })?;
     Ok(Json(json!({ "ok": true, "required": payload.required })))
 }
 
@@ -269,16 +311,16 @@ mod tests {
         .await;
 
         let test_team_id = Uuid::now_v7();
-        let _ = sqlx::query(
-            r#"INSERT INTO "team" (team_id, name, access_code) VALUES ($1, $2, $3)"#,
-        )
-        .bind(test_team_id)
-        .bind(format!("admin_tf_t_{test_team_id}"))
-        .bind(format!("code_{test_team_id}"))
-        .execute(&pool)
-        .await;
+        let _ =
+            sqlx::query(r#"INSERT INTO "team" (team_id, name, access_code) VALUES ($1, $2, $3)"#)
+                .bind(test_team_id)
+                .bind(format!("admin_tf_t_{test_team_id}"))
+                .bind(format!("code_{test_team_id}"))
+                .execute(&pool)
+                .await;
 
-        let res_u_tf = user_two_factor(admin.clone(), Path(test_user_id), State(state.clone())).await;
+        let res_u_tf =
+            user_two_factor(admin.clone(), Path(test_user_id), State(state.clone())).await;
         assert!(res_u_tf.is_ok());
 
         let res_upd_u_tf = update_user_two_factor(
@@ -290,7 +332,8 @@ mod tests {
         .await;
         assert!(res_upd_u_tf.is_ok());
 
-        let res_t_tf = team_two_factor(admin.clone(), Path(test_team_id), State(state.clone())).await;
+        let res_t_tf =
+            team_two_factor(admin.clone(), Path(test_team_id), State(state.clone())).await;
         assert!(res_t_tf.is_ok());
 
         let res_upd_t_tf = update_team_two_factor(
@@ -302,8 +345,14 @@ mod tests {
         .await;
         assert!(res_upd_t_tf.is_ok());
 
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(test_user_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#).bind(test_team_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(test_user_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#)
+            .bind(test_team_id)
+            .execute(&pool)
+            .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -316,17 +365,51 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(users(admin.clone(), State(err_state.clone())).await.is_err());
-        assert!(teams(admin.clone(), State(err_state.clone())).await.is_err());
-        assert!(websites(admin.clone(), State(err_state.clone())).await.is_err());
-        assert!(two_factor_global(admin.clone(), State(err_state.clone()), Json(TwoFactorRequiredPayload { required: true })).await.is_err());
-        let res_u_tf_err = user_two_factor(admin.clone(), Path(test_user_id), State(err_state.clone())).await;
+        assert!(
+            users(admin.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            teams(admin.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            websites(admin.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            two_factor_global(
+                admin.clone(),
+                State(err_state.clone()),
+                Json(TwoFactorRequiredPayload { required: true })
+            )
+            .await
+            .is_err()
+        );
+        let res_u_tf_err =
+            user_two_factor(admin.clone(), Path(test_user_id), State(err_state.clone())).await;
         assert!(res_u_tf_err.is_err());
-        let res_upd_u_tf_err = update_user_two_factor(admin.clone(), Path(test_user_id), State(err_state.clone()), Json(TwoFactorRequiredPayload { required: true })).await;
+        let res_upd_u_tf_err = update_user_two_factor(
+            admin.clone(),
+            Path(test_user_id),
+            State(err_state.clone()),
+            Json(TwoFactorRequiredPayload { required: true }),
+        )
+        .await;
         assert!(res_upd_u_tf_err.is_err());
-        let res_t_tf_err = team_two_factor(admin.clone(), Path(test_team_id), State(err_state.clone())).await;
+        let res_t_tf_err =
+            team_two_factor(admin.clone(), Path(test_team_id), State(err_state.clone())).await;
         assert!(res_t_tf_err.is_err());
-        let res_upd_t_tf_err = update_team_two_factor(admin.clone(), Path(test_team_id), State(err_state.clone()), Json(TwoFactorRequiredPayload { required: true })).await;
+        let res_upd_t_tf_err = update_team_two_factor(
+            admin.clone(),
+            Path(test_team_id),
+            State(err_state.clone()),
+            Json(TwoFactorRequiredPayload { required: true }),
+        )
+        .await;
         assert!(res_upd_t_tf_err.is_err());
     }
 }

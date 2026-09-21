@@ -175,11 +175,23 @@ mod tests {
             compare: None,
         });
 
-        assert!(list(Path(website_id), q.clone(), State(state.clone())).await.is_ok());
+        assert!(
+            list(Path(website_id), q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
-        assert!(series(Path(website_id), q.clone(), State(state.clone())).await.is_ok());
+        assert!(
+            series(Path(website_id), q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
-        assert!(stats(Path(website_id), q.clone(), State(state.clone())).await.is_ok());
+        assert!(
+            stats(Path(website_id), q.clone(), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -192,8 +204,20 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(list(Path(website_id), q.clone(), State(err_state.clone())).await.is_err());
-        assert!(series(Path(website_id), q.clone(), State(err_state.clone())).await.is_err());
-        assert!(stats(Path(website_id), q.clone(), State(err_state.clone())).await.is_err());
+        assert!(
+            list(Path(website_id), q.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            series(Path(website_id), q.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            stats(Path(website_id), q.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 }

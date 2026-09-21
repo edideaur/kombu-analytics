@@ -55,7 +55,9 @@ async fn test_teams_user_membership_management() {
         .await
         .unwrap();
     assert_eq!(res_create_t.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_create_t.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_create_t.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let created_team: Value = serde_json::from_slice(&bytes).unwrap();
     let team_id = created_team["id"].as_str().unwrap();
 
@@ -134,7 +136,9 @@ async fn test_teams_user_membership_management() {
                 .uri("/api/teams/join")
                 .header(admin_k, &admin_v)
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "accessCode": "nonexistent_code" }).to_string()))
+                .body(Body::from(
+                    json!({ "accessCode": "nonexistent_code" }).to_string(),
+                ))
                 .unwrap(),
         )
         .await

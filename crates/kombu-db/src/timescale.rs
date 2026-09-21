@@ -45,9 +45,7 @@ pub async fn register_hypertable(
     Ok(())
 }
 
-pub async fn get_registered_hypertables(
-    pool: &PgPool,
-) -> Result<Vec<String>, sqlx::Error> {
+pub async fn get_registered_hypertables(pool: &PgPool) -> Result<Vec<String>, sqlx::Error> {
     let rows = sqlx::query_as::<_, (String,)>(
         r#"
         SELECT hypertable_name

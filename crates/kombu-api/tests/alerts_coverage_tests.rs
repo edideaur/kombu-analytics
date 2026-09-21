@@ -79,7 +79,9 @@ async fn test_alerts_full_crud_and_history() {
         .await
         .unwrap();
     assert_eq!(res_create.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let alert: Value = serde_json::from_slice(&bytes).unwrap();
     let alert_id = alert["id"].as_str().unwrap();
 

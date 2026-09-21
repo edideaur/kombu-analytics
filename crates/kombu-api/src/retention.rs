@@ -606,9 +606,40 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(save_policy(Path(website_id), State(err_state.clone()), Json(RetentionPolicyInput { retention_days: 30, auto_purge_enabled: false })).await.is_err());
-        assert!(purge(Path(website_id), State(err_state.clone()), Json(PurgeRequest { days: Some(10), before: None, url_path: None })).await.is_ok());
-        assert!(history(Path(website_id), State(err_state.clone())).await.is_ok());
-        assert!(admin_purge_all(admin_user, State(err_state.clone())).await.is_ok());
+        assert!(
+            save_policy(
+                Path(website_id),
+                State(err_state.clone()),
+                Json(RetentionPolicyInput {
+                    retention_days: 30,
+                    auto_purge_enabled: false
+                })
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            purge(
+                Path(website_id),
+                State(err_state.clone()),
+                Json(PurgeRequest {
+                    days: Some(10),
+                    before: None,
+                    url_path: None
+                })
+            )
+            .await
+            .is_ok()
+        );
+        assert!(
+            history(Path(website_id), State(err_state.clone()))
+                .await
+                .is_ok()
+        );
+        assert!(
+            admin_purge_all(admin_user, State(err_state.clone()))
+                .await
+                .is_ok()
+        );
     }
 }

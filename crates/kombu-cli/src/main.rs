@@ -115,7 +115,10 @@ pub fn resolve_listen_address(listen: &str) -> String {
     }
 }
 
-pub fn resolve_migrate_url(cli_url: Option<String>, env_url: Option<String>) -> anyhow::Result<String> {
+pub fn resolve_migrate_url(
+    cli_url: Option<String>,
+    env_url: Option<String>,
+) -> anyhow::Result<String> {
     if let Some(u) = cli_url {
         return Ok(u);
     }
@@ -148,8 +151,8 @@ pub async fn run_serve_internal(
         let s = std::env::var("APP_SECRET")
             .or_else(|_| std::env::var("HASH_SALT"))
             .unwrap_or_default();
-        let a = std::env::var("KOMBU_ALLOW_INSECURE_SECRET").unwrap_or_default() == "1"
-            || cfg!(test);
+        let a =
+            std::env::var("KOMBU_ALLOW_INSECURE_SECRET").unwrap_or_default() == "1" || cfg!(test);
         (s, a)
     };
     validate_secret(&secret, allow_insecure)?;
@@ -231,8 +234,9 @@ pub async fn run_cli_with_shutdown(cli: Cli, shutdown: BoxFuture) -> anyhow::Res
                 }
 
                 if selected_engine == kombu_core::types::StorageEngine::Timescale {
-                    let installed =
-                        kombu_db::timescale::is_timescale_installed(&pool).await.unwrap_or(false);
+                    let installed = kombu_db::timescale::is_timescale_installed(&pool)
+                        .await
+                        .unwrap_or(false);
                     println!("TimescaleDB extension installed: {installed}");
                 }
             } else {
@@ -276,8 +280,12 @@ pub async fn run_cli_with_shutdown(cli: Cli, shutdown: BoxFuture) -> anyhow::Res
                 Err(e) => anyhow::bail!("Failed to connect to database: {e}"),
             };
             let content = std::fs::read_to_string(&file)?;
-            let count = plausible::import_plausible_csv(&pool, website_id, &content).await.unwrap_or(0);
-            println!("Successfully imported {count} events from Plausible CSV into website {website_id}");
+            let count = plausible::import_plausible_csv(&pool, website_id, &content)
+                .await
+                .unwrap_or(0);
+            println!(
+                "Successfully imported {count} events from Plausible CSV into website {website_id}"
+            );
         }
     }
     Ok(())
@@ -430,7 +438,9 @@ mod tests {
         std::fs::write(&file_path, "date,time,page\n2026-09-01,12:00:00,/test\n").unwrap();
 
         let website_id = Uuid::now_v7();
-        let pool = sqlx::PgPool::connect("postgres://kombu:kombu@localhost:5432/kombu").await.unwrap();
+        let pool = sqlx::PgPool::connect("postgres://kombu:kombu@localhost:5432/kombu")
+            .await
+            .unwrap();
         sqlx::query(r#"INSERT INTO "website" (website_id, name, domain, created_at) VALUES ($1, 'Cli Test', 'cli.test', now())"#)
             .bind(website_id)
             .execute(&pool)
@@ -697,10 +707,11 @@ mod tests {
             .connect(TMP_URL)
             .await
             .unwrap();
-        let orig: Vec<u8> = sqlx::query_scalar("SELECT checksum FROM _sqlx_migrations WHERE version = 2")
-            .fetch_one(&tmp)
-            .await
-            .unwrap();
+        let orig: Vec<u8> =
+            sqlx::query_scalar("SELECT checksum FROM _sqlx_migrations WHERE version = 2")
+                .fetch_one(&tmp)
+                .await
+                .unwrap();
         sqlx::query("UPDATE _sqlx_migrations SET checksum = '\\x00' WHERE version = 2")
             .execute(&tmp)
             .await
@@ -743,11 +754,23 @@ mod tests {
         assert_eq!(parse_env_u32(Some("not_a_num".into()), 200), 200);
         assert_eq!(parse_env_u32(None, 200), 200);
 
-        assert_eq!(resolve_migrate_url(Some("pg://cli".into()), None).unwrap(), "pg://cli");
-        assert_eq!(resolve_migrate_url(None, Some("pg://env".into())).unwrap(), "pg://env");
+        assert_eq!(
+            resolve_migrate_url(Some("pg://cli".into()), None).unwrap(),
+            "pg://cli"
+        );
+        assert_eq!(
+            resolve_migrate_url(None, Some("pg://env".into())).unwrap(),
+            "pg://env"
+        );
         assert!(resolve_migrate_url(None, None).is_err());
 
-        let res_sec_err = run_serve_internal("127.0.0.1:0", Some(("short", false)), None, Box::pin(std::future::ready(()))).await;
+        let res_sec_err = run_serve_internal(
+            "127.0.0.1:0",
+            Some(("short", false)),
+            None,
+            Box::pin(std::future::ready(())),
+        )
+        .await;
         assert!(res_sec_err.is_err());
         let res_db_err = run_serve_internal(
             "127.0.0.1:0",

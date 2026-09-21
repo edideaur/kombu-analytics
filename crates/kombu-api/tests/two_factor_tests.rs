@@ -69,7 +69,9 @@ async fn test_full_two_factor_lifecycle_and_verification() {
         .await
         .unwrap();
     assert_eq!(res_status.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_status.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_status.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let st: Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(st["isEnabled"], false);
     assert_eq!(st["isRequired"], false);
@@ -87,7 +89,9 @@ async fn test_full_two_factor_lifecycle_and_verification() {
         .await
         .unwrap();
     assert_eq!(res_init.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_init.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_init.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let init_json: Value = serde_json::from_slice(&bytes).unwrap();
     let _secret = init_json["secret"].as_str().unwrap();
 
@@ -133,7 +137,9 @@ async fn test_full_two_factor_lifecycle_and_verification() {
         .await
         .unwrap();
     assert_eq!(res_init2.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_init2.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_init2.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let init2_json: Value = serde_json::from_slice(&bytes).unwrap();
     let secret2 = init2_json["secret"].as_str().unwrap();
 
@@ -154,7 +160,9 @@ async fn test_full_two_factor_lifecycle_and_verification() {
         .await
         .unwrap();
     assert_eq!(res_conf.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_conf.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_conf.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let conf_json: Value = serde_json::from_slice(&bytes).unwrap();
     let backup_codes = conf_json["backupCodes"].as_array().unwrap();
     assert_eq!(backup_codes.len(), 10);
@@ -198,7 +206,9 @@ async fn test_full_two_factor_lifecycle_and_verification() {
                 .uri("/api/2fa/disable")
                 .header(auth_k, &auth_v)
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "password": "ValidPassword123!" }).to_string()))
+                .body(Body::from(
+                    json!({ "password": "ValidPassword123!" }).to_string(),
+                ))
                 .unwrap(),
         )
         .await
@@ -217,7 +227,9 @@ async fn test_full_two_factor_lifecycle_and_verification() {
         .await
         .unwrap();
     assert_eq!(res_st_after.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_st_after.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_st_after.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let st_after: Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(st_after["isEnabled"], false);
 

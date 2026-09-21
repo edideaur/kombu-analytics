@@ -16,8 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: 1.97.1
           components: clippy, rustfmt
       - name: Cache cargo
         uses: actions/cache@v4
@@ -53,7 +54,9 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -69,6 +72,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
       - name: Install Kani
         run: cargo install --locked kani-verifier && cargo kani setup
       - name: Verify kombu-core
@@ -88,11 +94,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
       - name: Build Frontend SPA
         working-directory: webui
         run: |
-          npm ci || npm install
+          npm ci --legacy-peer-deps || npm install --legacy-peer-deps
           npm run build
       - name: Build Release Binary
         run: cargo build --release

@@ -241,14 +241,13 @@ mod tests {
         let session_data_id = Uuid::now_v7();
         let now = Utc::now();
 
-        let _ = sqlx::query(
-            r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#,
-        )
-        .bind(website_id)
-        .bind("Session Data Test Web")
-        .bind(format!("sd-{website_id}.com"))
-        .execute(&pool)
-        .await;
+        let _ =
+            sqlx::query(r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#)
+                .bind(website_id)
+                .bind("Session Data Test Web")
+                .bind(format!("sd-{website_id}.com"))
+                .execute(&pool)
+                .await;
 
         let _ = sqlx::query(
             r#"INSERT INTO "session" (session_id, website_id, hostname, browser, os, device, screen, language, country, distinct_id)
@@ -270,44 +269,93 @@ mod tests {
         .execute(&pool)
         .await;
 
-        assert!(properties(Path(website_id), Query(SessionDataQuery {
-            start_at: None,
-            end_at: None,
-            property_name: Some("tier".into()),
-            data_type: None,
-        }), State(state.clone())).await.is_ok());
+        assert!(
+            properties(
+                Path(website_id),
+                Query(SessionDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    property_name: Some("tier".into()),
+                    data_type: None,
+                }),
+                State(state.clone())
+            )
+            .await
+            .is_ok()
+        );
 
-        assert!(properties(Path(website_id), Query(SessionDataQuery {
-            start_at: None,
-            end_at: None,
-            property_name: None,
-            data_type: None,
-        }), State(state.clone())).await.is_ok());
+        assert!(
+            properties(
+                Path(website_id),
+                Query(SessionDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    property_name: None,
+                    data_type: None,
+                }),
+                State(state.clone())
+            )
+            .await
+            .is_ok()
+        );
 
-        assert!(values(Path(website_id), Query(SessionDataQuery {
-            start_at: None,
-            end_at: None,
-            property_name: Some("tier".into()),
-            data_type: None,
-        }), State(state.clone())).await.is_ok());
+        assert!(
+            values(
+                Path(website_id),
+                Query(SessionDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    property_name: Some("tier".into()),
+                    data_type: None,
+                }),
+                State(state.clone())
+            )
+            .await
+            .is_ok()
+        );
 
-        assert!(stats(Path(website_id), Query(SessionDataQuery {
-            start_at: None,
-            end_at: None,
-            property_name: Some("tier".into()),
-            data_type: None,
-        }), State(state.clone())).await.is_ok());
+        assert!(
+            stats(
+                Path(website_id),
+                Query(SessionDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    property_name: Some("tier".into()),
+                    data_type: None,
+                }),
+                State(state.clone())
+            )
+            .await
+            .is_ok()
+        );
 
-        assert!(pivot(Path(website_id), Query(SessionDataQuery {
-            start_at: None,
-            end_at: None,
-            property_name: None,
-            data_type: None,
-        }), State(state.clone())).await.is_ok());
+        assert!(
+            pivot(
+                Path(website_id),
+                Query(SessionDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    property_name: None,
+                    data_type: None,
+                }),
+                State(state.clone())
+            )
+            .await
+            .is_ok()
+        );
 
-        let _ = sqlx::query(r#"DELETE FROM "session_data" WHERE session_data_id = $1"#).bind(session_data_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "session" WHERE session_id = $1"#).bind(session_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#).bind(website_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "session_data" WHERE session_data_id = $1"#)
+            .bind(session_data_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "session" WHERE session_id = $1"#)
+            .bind(session_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
+            .bind(website_id)
+            .execute(&pool)
+            .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -326,9 +374,52 @@ mod tests {
             property_name: None,
             data_type: None,
         });
-        assert!(properties(Path(website_id), dummy_q, State(err_state.clone())).await.is_err());
-        assert!(values(Path(website_id), Query(SessionDataQuery { start_at: None, end_at: None, property_name: None, data_type: None }), State(err_state.clone())).await.is_err());
-        assert!(stats(Path(website_id), Query(SessionDataQuery { start_at: None, end_at: None, property_name: None, data_type: None }), State(err_state.clone())).await.is_err());
-        assert!(pivot(Path(website_id), Query(SessionDataQuery { start_at: None, end_at: None, property_name: None, data_type: None }), State(err_state.clone())).await.is_err());
+        assert!(
+            properties(Path(website_id), dummy_q, State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            values(
+                Path(website_id),
+                Query(SessionDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    property_name: None,
+                    data_type: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            stats(
+                Path(website_id),
+                Query(SessionDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    property_name: None,
+                    data_type: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            pivot(
+                Path(website_id),
+                Query(SessionDataQuery {
+                    start_at: None,
+                    end_at: None,
+                    property_name: None,
+                    data_type: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
     }
 }

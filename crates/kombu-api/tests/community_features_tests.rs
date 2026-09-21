@@ -62,17 +62,24 @@ async fn test_community_features_integration() {
     let end_at = chrono::Utc::now();
     let start_at = end_at - chrono::Duration::days(30);
 
-    let host_metrics = kombu_query::get_metrics(&pool, website_id, start_at, end_at, "host", 10).await;
+    let host_metrics =
+        kombu_query::get_metrics(&pool, website_id, start_at, end_at, "host", 10).await;
     assert!(host_metrics.is_ok(), "host metric query should succeed");
 
     let hostname_metrics =
         kombu_query::get_metrics(&pool, website_id, start_at, end_at, "hostname", 10).await;
-    assert!(hostname_metrics.is_ok(), "hostname metric query should succeed");
+    assert!(
+        hostname_metrics.is_ok(),
+        "hostname metric query should succeed"
+    );
 
     let expanded_host =
         kombu_query::get_expanded_metrics(&pool, website_id, start_at, end_at, "hostname", 10, 0)
             .await;
-    assert!(expanded_host.is_ok(), "expanded hostname query should succeed");
+    assert!(
+        expanded_host.is_ok(),
+        "expanded hostname query should succeed"
+    );
 
     let overview_res = app
         .clone()

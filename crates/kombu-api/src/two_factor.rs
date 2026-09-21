@@ -578,7 +578,11 @@ mod tests {
         let uid = Uuid::now_v7();
         let hashes = vec!["covhash".to_string()];
 
-        assert!(store_confirmed_two_factor(&pool, uid, &hashes).await.is_err());
+        assert!(
+            store_confirmed_two_factor(&pool, uid, &hashes)
+                .await
+                .is_err()
+        );
 
         sqlx::query(
             "CREATE TABLE two_factor_auth (user_id UUID NOT NULL, is_enabled BOOLEAN NOT NULL DEFAULT false, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())",
@@ -586,13 +590,21 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        assert!(store_confirmed_two_factor(&pool, uid, &hashes).await.is_err());
+        assert!(
+            store_confirmed_two_factor(&pool, uid, &hashes)
+                .await
+                .is_err()
+        );
 
         sqlx::query("CREATE TABLE two_factor_backup_code (user_id UUID NOT NULL)")
             .execute(&pool)
             .await
             .unwrap();
-        assert!(store_confirmed_two_factor(&pool, uid, &hashes).await.is_err());
+        assert!(
+            store_confirmed_two_factor(&pool, uid, &hashes)
+                .await
+                .is_err()
+        );
 
         sqlx::query("DROP TABLE two_factor_backup_code")
             .execute(&pool)
@@ -616,7 +628,11 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        assert!(store_confirmed_two_factor(&pool, uid, &hashes).await.is_err());
+        assert!(
+            store_confirmed_two_factor(&pool, uid, &hashes)
+                .await
+                .is_err()
+        );
         sqlx::query("DROP TRIGGER IF EXISTS cov_defer_ins ON two_factor_backup_code")
             .execute(&pool)
             .await
@@ -641,12 +657,14 @@ mod tests {
         .await
         .unwrap();
         let seed_id = Uuid::now_v7().to_string();
-        sqlx::query(r#"INSERT INTO "two_factor_backup_code" (id, user_id, code_hash) VALUES ($1, $2, 'x')"#)
-            .bind(&seed_id)
-            .bind(uid)
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query(
+            r#"INSERT INTO "two_factor_backup_code" (id, user_id, code_hash) VALUES ($1, $2, 'x')"#,
+        )
+        .bind(&seed_id)
+        .bind(uid)
+        .execute(&pool)
+        .await
+        .unwrap();
         assert!(remove_two_factor(&pool, uid).await.is_err());
 
         pool.close().await;
@@ -706,12 +724,9 @@ mod tests {
             role: "user".into(),
         };
 
-        let res_req_status = status(
-            MaybeAuthUser(Some(auth_user.clone())),
-            State(state.clone()),
-        )
-        .await
-        .unwrap();
+        let res_req_status = status(MaybeAuthUser(Some(auth_user.clone())), State(state.clone()))
+            .await
+            .unwrap();
         assert_eq!(res_req_status.0["isRequired"], true);
         assert_eq!(res_req_status.0["requiredReason"], "user");
 
@@ -748,18 +763,25 @@ mod tests {
             role: "user".into(),
         };
 
-        let res_team_req_status = status(
-            MaybeAuthUser(Some(team_auth.clone())),
-            State(state.clone()),
-        )
-        .await
-        .unwrap();
+        let res_team_req_status =
+            status(MaybeAuthUser(Some(team_auth.clone())), State(state.clone()))
+                .await
+                .unwrap();
         assert_eq!(res_team_req_status.0["isRequired"], true);
         assert_eq!(res_team_req_status.0["requiredReason"], "team");
 
-        let _ = sqlx::query(r#"DELETE FROM "team_user" WHERE team_id = $1"#).bind(team_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#).bind(team_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#).bind(team_u_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "team_user" WHERE team_id = $1"#)
+            .bind(team_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#)
+            .bind(team_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "user" WHERE user_id = $1"#)
+            .bind(team_u_id)
+            .execute(&pool)
+            .await;
 
         let res_no_pending = confirm(
             auth_user.clone(),
@@ -853,13 +875,32 @@ mod tests {
         assert!(res_conf_already.is_err());
         assert_eq!(res_conf_already.unwrap_err().0, StatusCode::BAD_REQUEST);
 
-        let res_no_tok = verify(HeaderMap::new(), State(state.clone()), Json(VerifyBody { token: None, backup_code: None })).await;
+        let res_no_tok = verify(
+            HeaderMap::new(),
+            State(state.clone()),
+            Json(VerifyBody {
+                token: None,
+                backup_code: None,
+            }),
+        )
+        .await;
         assert!(res_no_tok.is_err());
         assert_eq!(res_no_tok.unwrap_err().0, StatusCode::UNAUTHORIZED);
 
         let mut bad_headers = HeaderMap::new();
-        bad_headers.insert("authorization", HeaderValue::from_static("Bearer bad_token"));
-        let res_bad_tok = verify(bad_headers, State(state.clone()), Json(VerifyBody { token: None, backup_code: None })).await;
+        bad_headers.insert(
+            "authorization",
+            HeaderValue::from_static("Bearer bad_token"),
+        );
+        let res_bad_tok = verify(
+            bad_headers,
+            State(state.clone()),
+            Json(VerifyBody {
+                token: None,
+                backup_code: None,
+            }),
+        )
+        .await;
         assert!(res_bad_tok.is_err());
         assert_eq!(res_bad_tok.unwrap_err().0, StatusCode::UNAUTHORIZED);
 
@@ -878,7 +919,10 @@ mod tests {
         .unwrap();
         let make_headers = |ip: &str| {
             let mut h = HeaderMap::new();
-            h.insert("authorization", HeaderValue::from_str(&format!("Bearer {token_jwt}")).unwrap());
+            h.insert(
+                "authorization",
+                HeaderValue::from_str(&format!("Bearer {token_jwt}")).unwrap(),
+            );
             h.insert("x-forwarded-for", HeaderValue::from_str(ip).unwrap());
             h
         };
@@ -1003,11 +1047,21 @@ mod tests {
         assert!(res_dis_already.is_err());
         assert_eq!(res_dis_already.unwrap_err().0, StatusCode::BAD_REQUEST);
 
-        let res_re_init = initiate(auth_user.clone(), State(state.clone())).await.unwrap();
+        let res_re_init = initiate(auth_user.clone(), State(state.clone()))
+            .await
+            .unwrap();
         let re_secret = res_re_init.0["secret"].as_str().unwrap().to_string();
         let re_totp = create_totp(&re_secret, &username).unwrap();
         let re_code = re_totp.generate_current().to_string();
-        let _ = confirm(auth_user.clone(), State(state.clone()), Json(ConfirmBody { token: re_code.clone() })).await.unwrap();
+        let _ = confirm(
+            auth_user.clone(),
+            State(state.clone()),
+            Json(ConfirmBody {
+                token: re_code.clone(),
+            }),
+        )
+        .await
+        .unwrap();
 
         let res_dis_none = disable(
             auth_user.clone(),
@@ -1035,7 +1089,10 @@ mod tests {
         )
         .await;
         assert!(res_dis_corrupt_totp.is_err());
-        assert_eq!(res_dis_corrupt_totp.unwrap_err().0, StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            res_dis_corrupt_totp.unwrap_err().0,
+            StatusCode::UNAUTHORIZED
+        );
 
         let _ = sqlx::query(r#"UPDATE "two_factor_auth" SET secret = $2 WHERE user_id = $1"#)
             .bind(user_id)
@@ -1068,7 +1125,10 @@ mod tests {
         )
         .await;
         assert!(res_dis_err.is_err());
-        assert_eq!(res_dis_err.unwrap_err().0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            res_dis_err.unwrap_err().0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
         let _ = sqlx::query(r#"DROP RULE IF EXISTS no_del_test ON "two_factor_auth";"#)
             .execute(&pool)
             .await;
@@ -1085,7 +1145,9 @@ mod tests {
         .unwrap();
         assert_eq!(res_dis_token.0["ok"], true);
 
-        let res_err_init = initiate(auth_user.clone(), State(state.clone())).await.unwrap();
+        let res_err_init = initiate(auth_user.clone(), State(state.clone()))
+            .await
+            .unwrap();
         let err_secret = res_err_init.0["secret"].as_str().unwrap().to_string();
         let err_totp = create_totp(&err_secret, &username).unwrap();
         let err_code = err_totp.generate_current().to_string();
@@ -1100,11 +1162,17 @@ mod tests {
         )
         .await;
         assert!(res_conf_err.is_err());
-        assert_eq!(res_conf_err.unwrap_err().0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            res_conf_err.unwrap_err().0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
         let _ = sqlx::query(r#"DROP RULE IF EXISTS no_ins_test ON "two_factor_backup_code";"#)
             .execute(&pool)
             .await;
-        let _ = sqlx::query(r#"DELETE FROM "two_factor_auth" WHERE user_id = $1"#).bind(user_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "two_factor_auth" WHERE user_id = $1"#)
+            .bind(user_id)
+            .execute(&pool)
+            .await;
 
         let other_u_id = Uuid::now_v7();
         let other_claims = Claims {
@@ -1120,7 +1188,10 @@ mod tests {
         )
         .unwrap();
         let mut other_headers = HeaderMap::new();
-        other_headers.insert("authorization", HeaderValue::from_str(&format!("Bearer {other_jwt}")).unwrap());
+        other_headers.insert(
+            "authorization",
+            HeaderValue::from_str(&format!("Bearer {other_jwt}")).unwrap(),
+        );
 
         let res_v_not_enabled = verify(
             other_headers.clone(),
@@ -1174,16 +1245,75 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(status(MaybeAuthUser(Some(auth_user.clone())), State(err_state.clone())).await.is_ok());
-        assert!(initiate(auth_user.clone(), State(err_state.clone())).await.is_err());
-        assert!(confirm(auth_user.clone(), State(err_state.clone()), Json(ConfirmBody { token: "123456".into() })).await.is_err());
-        assert!(cancel(auth_user.clone(), State(err_state.clone())).await.is_err());
-        assert!(disable(auth_user.clone(), State(err_state.clone()), Json(DisableBody { password: Some("pwd".into()), token: None })).await.is_err());
-        assert!(verify(valid_headers, State(err_state.clone()), Json(VerifyBody { token: Some("123456".into()), backup_code: None })).await.is_err());
-        assert!(store_confirmed_two_factor(&closed_pool, user_id, &["hash".into()]).await.is_err());
+        assert!(
+            status(
+                MaybeAuthUser(Some(auth_user.clone())),
+                State(err_state.clone())
+            )
+            .await
+            .is_ok()
+        );
+        assert!(
+            initiate(auth_user.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            confirm(
+                auth_user.clone(),
+                State(err_state.clone()),
+                Json(ConfirmBody {
+                    token: "123456".into()
+                })
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            cancel(auth_user.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            disable(
+                auth_user.clone(),
+                State(err_state.clone()),
+                Json(DisableBody {
+                    password: Some("pwd".into()),
+                    token: None
+                })
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            verify(
+                valid_headers,
+                State(err_state.clone()),
+                Json(VerifyBody {
+                    token: Some("123456".into()),
+                    backup_code: None
+                })
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            store_confirmed_two_factor(&closed_pool, user_id, &["hash".into()])
+                .await
+                .is_err()
+        );
         assert!(remove_two_factor(&closed_pool, user_id).await.is_err());
-        let res_init_bad = initiate_with_secret(auth_user.clone(), State(state.clone()), "invalid!base32!".into()).await;
+        let res_init_bad = initiate_with_secret(
+            auth_user.clone(),
+            State(state.clone()),
+            "invalid!base32!".into(),
+        )
+        .await;
         assert!(res_init_bad.is_err());
-        assert_eq!(res_init_bad.unwrap_err().0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            res_init_bad.unwrap_err().0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
     }
 }

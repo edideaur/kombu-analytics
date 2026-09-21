@@ -255,9 +255,7 @@ mod tests {
             role: "user".to_string(),
         };
 
-        let res_me = get(auth_user.clone(), State(state.clone()))
-            .await
-            .unwrap();
+        let res_me = get(auth_user.clone(), State(state.clone())).await.unwrap();
         assert_eq!(res_me.0["user"]["username"], username);
         assert_eq!(res_me.0["user"]["isAdmin"], false);
 
@@ -283,7 +281,9 @@ mod tests {
             username: username.clone(),
             role: "admin".to_string(),
         };
-        let res_admin_sites = websites(admin_user.clone(), State(state.clone())).await.unwrap();
+        let res_admin_sites = websites(admin_user.clone(), State(state.clone()))
+            .await
+            .unwrap();
         assert!(res_admin_sites.0["count"].as_i64().unwrap() >= 0);
 
         let res_teams = teams(auth_user.clone(), State(state.clone()))
@@ -396,10 +396,34 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(get(auth_user.clone(), State(err_state.clone())).await.is_err());
-        assert!(websites(auth_user.clone(), State(err_state.clone())).await.is_err());
-        assert!(websites(admin_user, State(err_state.clone())).await.is_err());
-        assert!(teams(auth_user.clone(), State(err_state.clone())).await.is_err());
-        assert!(password(auth_user, State(err_state.clone()), Json(json!({ "currentPassword": "p", "newPassword": "p" }))).await.is_err());
+        assert!(
+            get(auth_user.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            websites(auth_user.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            websites(admin_user, State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            teams(auth_user.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            password(
+                auth_user,
+                State(err_state.clone()),
+                Json(json!({ "currentPassword": "p", "newPassword": "p" }))
+            )
+            .await
+            .is_err()
+        );
     }
 }

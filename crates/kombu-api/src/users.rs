@@ -502,12 +502,8 @@ mod tests {
         .unwrap();
         assert_eq!(res_team_ok.0["page"], 1);
 
-        let res_del_self = delete(
-            admin_wrapper.clone(),
-            Path(admin_id),
-            State(state.clone()),
-        )
-        .await;
+        let res_del_self =
+            delete(admin_wrapper.clone(), Path(admin_id), State(state.clone())).await;
         assert!(res_del_self.is_err());
         assert_eq!(res_del_self.unwrap_err().0, StatusCode::BAD_REQUEST);
 
@@ -536,12 +532,65 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(list(admin_wrapper.clone(), State(err_state.clone())).await.is_err());
-        assert!(create(admin_wrapper.clone(), State(err_state.clone()), Json(json!({ "username": "fail" }))).await.is_err());
-        assert!(get(admin_auth.clone(), Path(target_user_id), State(err_state.clone())).await.is_err());
-        assert!(update(admin_auth.clone(), Path(target_user_id), State(err_state.clone()), Json(json!({ "username": "fail" }))).await.is_err());
-        assert!(delete(admin_wrapper.clone(), Path(target_user_id), State(err_state.clone())).await.is_err());
-        assert!(websites(admin_auth.clone(), Path(target_user_id), State(err_state.clone())).await.is_err());
-        assert!(teams(admin_auth.clone(), Path(target_user_id), State(err_state.clone())).await.is_err());
+        assert!(
+            list(admin_wrapper.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            create(
+                admin_wrapper.clone(),
+                State(err_state.clone()),
+                Json(json!({ "username": "fail" }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            get(
+                admin_auth.clone(),
+                Path(target_user_id),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            update(
+                admin_auth.clone(),
+                Path(target_user_id),
+                State(err_state.clone()),
+                Json(json!({ "username": "fail" }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete(
+                admin_wrapper.clone(),
+                Path(target_user_id),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            websites(
+                admin_auth.clone(),
+                Path(target_user_id),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            teams(
+                admin_auth.clone(),
+                Path(target_user_id),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
     }
 }

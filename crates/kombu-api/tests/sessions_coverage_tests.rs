@@ -84,7 +84,9 @@ async fn test_sessions_and_properties_and_activity() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri(format!("/api/websites/{website_id}/sessions/{session_id}/activity"))
+                .uri(format!(
+                    "/api/websites/{website_id}/sessions/{session_id}/activity"
+                ))
                 .header(admin_k, &admin_v)
                 .body(Body::empty())
                 .unwrap(),
@@ -97,7 +99,9 @@ async fn test_sessions_and_properties_and_activity() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri(format!("/api/websites/{website_id}/sessions/{session_id}/properties"))
+                .uri(format!(
+                    "/api/websites/{website_id}/sessions/{session_id}/properties"
+                ))
                 .header(admin_k, &admin_v)
                 .body(Body::empty())
                 .unwrap(),

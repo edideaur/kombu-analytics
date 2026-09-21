@@ -275,7 +275,7 @@ export default function AppRoutes() {
           <Route path="settings/security" element={<UserSecurityPage />} />
           <Route path="settings/teams" element={<TeamsSettingsPage />} />
           <Route path="settings/teams/:teamId" element={<TeamSettingsDetail />} />
-          <Route path="settings/websites" element={<WebsitesSettingsPage />} />
+          <Route path="settings/websites" element={<WebsitesSettingsPage teamId="" />} />
           <Route path="settings/websites/:websiteId" element={<WebsiteSettingsDetail />} />
         </Route>
       </Routes>

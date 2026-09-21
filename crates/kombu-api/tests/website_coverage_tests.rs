@@ -76,7 +76,9 @@ async fn test_website_full_lifecycle_and_analytics() {
         .await
         .unwrap();
     assert_eq!(res_create.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let site: Value = serde_json::from_slice(&bytes).unwrap();
     let website_id = site["id"].as_str().unwrap();
 
@@ -167,7 +169,11 @@ async fn test_website_full_lifecycle_and_analytics() {
             )
             .await
             .unwrap();
-        assert_eq!(res.status(), StatusCode::OK, "Failed for endpoint {endpoint}");
+        assert_eq!(
+            res.status(),
+            StatusCode::OK,
+            "Failed for endpoint {endpoint}"
+        );
     }
 
     let res_reset = app
@@ -287,7 +293,9 @@ async fn test_website_full_lifecycle_and_analytics() {
                 .uri(format!("/api/websites/{website_id}/transfer"))
                 .header(unauth_k, &unauth_v)
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "userId": Uuid::now_v7().to_string() }).to_string()))
+                .body(Body::from(
+                    json!({ "userId": Uuid::now_v7().to_string() }).to_string(),
+                ))
                 .unwrap(),
         )
         .await

@@ -59,7 +59,9 @@ async fn test_links_full_crud_and_redirect() {
         .await
         .unwrap();
     assert_eq!(res_create.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_create.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let link: Value = serde_json::from_slice(&bytes).unwrap();
     let link_id = link["id"].as_str().unwrap();
 

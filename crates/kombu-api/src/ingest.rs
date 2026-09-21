@@ -109,7 +109,9 @@ pub async fn send(
         .unwrap_or_else(|| "127.0.0.1".to_string());
     let ip = ip_resolved.as_str();
 
-    let ignore_test_header = headers.get("x-kombu-test-ignore-ip").and_then(|v| v.to_str().ok());
+    let ignore_test_header = headers
+        .get("x-kombu-test-ignore-ip")
+        .and_then(|v| v.to_str().ok());
     if kombu_core::ip::is_ip_ignored(ip, ignore_test_header) {
         return Err((
             StatusCode::FORBIDDEN,
@@ -266,10 +268,13 @@ pub async fn heartbeat_post(
                 let header_iter = headers
                     .iter()
                     .filter_map(|(k, v)| v.to_str().ok().map(|s| (k.as_str(), s)));
-                let ip = kombu_core::ip::resolve_client_ip(header_iter, custom_ip_header.as_deref())
-                    .unwrap_or_else(|| "127.0.0.1".to_string());
+                let ip =
+                    kombu_core::ip::resolve_client_ip(header_iter, custom_ip_header.as_deref())
+                        .unwrap_or_else(|| "127.0.0.1".to_string());
 
-                let ignore_test_header = headers.get("x-kombu-test-ignore-ip").and_then(|v| v.to_str().ok());
+                let ignore_test_header = headers
+                    .get("x-kombu-test-ignore-ip")
+                    .and_then(|v| v.to_str().ok());
                 if kombu_core::ip::is_ip_ignored(&ip, ignore_test_header) {
                     return Json(json!({ "ok": false, "error": "IP blocked" }));
                 }
@@ -279,12 +284,16 @@ pub async fn heartbeat_post(
                     .and_then(|v| v.to_str().ok())
                     .unwrap_or("");
                 let now = Utc::now();
-                let session_id = body.session_id.and_then(|s| Uuid::parse_str(&s).ok()).unwrap_or_else(|| {
-                    generate_session_id(source_id, &ip, user_agent, &state.app_secret, now)
-                });
-                let visit_id = body.visit_id.and_then(|s| Uuid::parse_str(&s).ok()).unwrap_or_else(|| {
-                    generate_visit_id(session_id, now)
-                });
+                let session_id = body
+                    .session_id
+                    .and_then(|s| Uuid::parse_str(&s).ok())
+                    .unwrap_or_else(|| {
+                        generate_session_id(source_id, &ip, user_agent, &state.app_secret, now)
+                    });
+                let visit_id = body
+                    .visit_id
+                    .and_then(|s| Uuid::parse_str(&s).ok())
+                    .unwrap_or_else(|| generate_visit_id(session_id, now));
 
                 let normalized = kombu_ingest::CollectData {
                     website: Some(source_id.to_string()),
@@ -367,7 +376,12 @@ mod tests {
                 ..Default::default()
             },
         };
-        let res = send(State(state.clone()), HeaderMap::new(), Json(formula_payload)).await;
+        let res = send(
+            State(state.clone()),
+            HeaderMap::new(),
+            Json(formula_payload),
+        )
+        .await;
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().0, StatusCode::BAD_REQUEST);
 
@@ -438,7 +452,8 @@ mod tests {
                 session_id: None,
                 visit_id: None,
             })),
-        ).await;
+        )
+        .await;
         assert_eq!(res_no_web.0["ok"], true);
 
         let res_bad_uuid = heartbeat_post(
@@ -451,7 +466,8 @@ mod tests {
                 session_id: None,
                 visit_id: None,
             })),
-        ).await;
+        )
+        .await;
         assert_eq!(res_bad_uuid.0["ok"], true);
 
         let missing_id = Uuid::now_v7();
@@ -465,17 +481,23 @@ mod tests {
                 session_id: None,
                 visit_id: None,
             })),
-        ).await;
+        )
+        .await;
         assert_eq!(res_missing.0["ok"], false);
 
         let site_id = Uuid::now_v7();
-        let _ = sqlx::query(r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, 'HB Site', 'hb.site')"#)
-            .bind(site_id)
-            .execute(&pool)
-            .await;
+        let _ = sqlx::query(
+            r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, 'HB Site', 'hb.site')"#,
+        )
+        .bind(site_id)
+        .execute(&pool)
+        .await;
 
         let mut headers = HeaderMap::new();
-        headers.insert("x-kombu-test-ignore-ip", HeaderValue::from_static("127.0.0.1"));
+        headers.insert(
+            "x-kombu-test-ignore-ip",
+            HeaderValue::from_static("127.0.0.1"),
+        );
         let res_blocked = heartbeat_post(
             State(state.clone()),
             headers,
@@ -486,7 +508,8 @@ mod tests {
                 session_id: None,
                 visit_id: None,
             })),
-        ).await;
+        )
+        .await;
         assert_eq!(res_blocked.0["ok"], false);
 
         let sess_id = Uuid::now_v7();
@@ -501,11 +524,15 @@ mod tests {
                 session_id: Some(sess_id.to_string()),
                 visit_id: Some(vis_id.to_string()),
             })),
-        ).await;
+        )
+        .await;
         assert_eq!(res_ok.0["ok"], true);
 
         let mut headers_bad_ua = HeaderMap::new();
-        headers_bad_ua.insert("user-agent", axum::http::HeaderValue::from_bytes(&[0xFF]).unwrap());
+        headers_bad_ua.insert(
+            "user-agent",
+            axum::http::HeaderValue::from_bytes(&[0xFF]).unwrap(),
+        );
         let res_bad_ua = heartbeat_post(
             State(state.clone()),
             headers_bad_ua,
@@ -516,10 +543,14 @@ mod tests {
                 session_id: Some(sess_id.to_string()),
                 visit_id: Some(vis_id.to_string()),
             })),
-        ).await;
+        )
+        .await;
         assert_eq!(res_bad_ua.0["ok"], true);
 
-        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#).bind(site_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
+            .bind(site_id)
+            .execute(&pool)
+            .await;
     }
 
     #[tokio::test]
@@ -588,8 +619,16 @@ mod tests {
         .unwrap();
 
         let mut headers = HeaderMap::new();
-        headers.insert("x-forwarded-for", HeaderValue::from_static("8.8.8.8, 1.1.1.1"));
-        headers.insert("user-agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36"));
+        headers.insert(
+            "x-forwarded-for",
+            HeaderValue::from_static("8.8.8.8, 1.1.1.1"),
+        );
+        headers.insert(
+            "user-agent",
+            HeaderValue::from_static(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36",
+            ),
+        );
         headers.insert("cf-ipcountry", HeaderValue::from_static("US"));
         headers.insert("cf-region-code", HeaderValue::from_static("CA"));
         headers.insert("cf-ipcity", HeaderValue::from_static("Los Angeles"));
@@ -620,9 +659,13 @@ mod tests {
         .unwrap();
         assert!(res_send_1.0["cache"].is_string());
 
-        let res_send_2 = send(State(state.clone()), headers.clone(), Json(valid_payload.clone()))
-            .await
-            .unwrap();
+        let res_send_2 = send(
+            State(state.clone()),
+            headers.clone(),
+            Json(valid_payload.clone()),
+        )
+        .await
+        .unwrap();
         assert!(res_send_2.0["cache"].is_string());
 
         let perf_payload = CollectPayload {
@@ -692,7 +735,10 @@ mod tests {
         assert_eq!(res_batch_non_array.0["ok"], true);
 
         let mut blocked_headers = HeaderMap::new();
-        blocked_headers.insert("x-kombu-test-ignore-ip", HeaderValue::from_static("127.0.0.1"));
+        blocked_headers.insert(
+            "x-kombu-test-ignore-ip",
+            HeaderValue::from_static("127.0.0.1"),
+        );
         let res_blocked = send(
             State(state.clone()),
             blocked_headers.clone(),

@@ -37,7 +37,11 @@ async fn test_admin_and_users_and_me_full_flow() {
     let app = test_app();
     let (admin_k, admin_v) = admin_auth_header();
 
-    for path in ["/api/admin/users", "/api/admin/teams", "/api/admin/websites"] {
+    for path in [
+        "/api/admin/users",
+        "/api/admin/teams",
+        "/api/admin/websites",
+    ] {
         let res = app
             .clone()
             .oneshot(
@@ -50,7 +54,9 @@ async fn test_admin_and_users_and_me_full_flow() {
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::OK, "Failed for {path}");
-        let bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let val: Value = serde_json::from_slice(&bytes).unwrap();
         assert!(val.get("data").is_some());
     }
@@ -90,7 +96,9 @@ async fn test_admin_and_users_and_me_full_flow() {
         .await
         .unwrap();
     assert_eq!(res_create_u.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_create_u.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_create_u.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let created_user: Value = serde_json::from_slice(&bytes).unwrap();
     let created_id = created_user["id"].as_str().unwrap();
 
@@ -239,7 +247,9 @@ async fn test_teams_crud_and_members() {
         .await
         .unwrap();
     assert_eq!(res_create_t.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_create_t.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_create_t.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let created_team: Value = serde_json::from_slice(&bytes).unwrap();
     let team_id = created_team["id"].as_str().unwrap();
     let access_code = created_team["accessCode"].as_str().unwrap();
@@ -265,7 +275,9 @@ async fn test_teams_crud_and_members() {
                 .uri(format!("/api/teams/{team_id}"))
                 .header(admin_k, &admin_v)
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "name": format!("{team_name}_upd") }).to_string()))
+                .body(Body::from(
+                    json!({ "name": format!("{team_name}_upd") }).to_string(),
+                ))
                 .unwrap(),
         )
         .await
@@ -378,7 +390,9 @@ async fn test_boards_links_pixels_segments_revenue() {
         .await
         .unwrap();
     assert_eq!(res_b_create.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_b_create.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_b_create.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let board: Value = serde_json::from_slice(&bytes).unwrap();
     let board_id = board["id"].as_str().unwrap();
 
@@ -515,7 +529,9 @@ async fn test_boards_links_pixels_segments_revenue() {
         .await
         .unwrap();
     assert_eq!(res_w_create.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_w_create.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_w_create.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let site: Value = serde_json::from_slice(&bytes).unwrap();
     let website_id = site["id"].as_str().unwrap();
 

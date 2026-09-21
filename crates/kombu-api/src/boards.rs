@@ -311,23 +311,18 @@ mod tests {
         let clone_id = Uuid::parse_str(clone_id_str).unwrap();
         assert_eq!(res_clone.0["name"], "Cloned Board");
 
-        let res_clone_404 = clone(
-            Path(Uuid::now_v7()),
-            State(state.clone()),
-            Json(json!({})),
-        )
-        .await;
+        let res_clone_404 =
+            clone(Path(Uuid::now_v7()), State(state.clone()), Json(json!({}))).await;
         assert!(res_clone_404.is_err());
         assert_eq!(res_clone_404.unwrap_err().0, StatusCode::NOT_FOUND);
 
-        let res_clone_default = clone(
-            Path(board_id),
+        let res_clone_default = clone(Path(board_id), State(state.clone()), Json(json!({}))).await;
+        assert!(res_clone_default.is_ok());
+        let _ = delete(
+            Path(Uuid::parse_str(res_clone_default.unwrap().0["id"].as_str().unwrap()).unwrap()),
             State(state.clone()),
-            Json(json!({})),
         )
         .await;
-        assert!(res_clone_default.is_ok());
-        let _ = delete(Path(Uuid::parse_str(res_clone_default.unwrap().0["id"].as_str().unwrap()).unwrap()), State(state.clone())).await;
 
         let res_clone_toolong = clone(
             Path(board_id),
@@ -336,16 +331,15 @@ mod tests {
         )
         .await;
         assert!(res_clone_toolong.is_err());
-        assert_eq!(res_clone_toolong.unwrap_err().0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            res_clone_toolong.unwrap_err().0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
 
-        let res_del_1 = delete(Path(board_id), State(state.clone()))
-            .await
-            .unwrap();
+        let res_del_1 = delete(Path(board_id), State(state.clone())).await.unwrap();
         assert_eq!(res_del_1.0["ok"], true);
 
-        let res_del_2 = delete(Path(clone_id), State(state.clone()))
-            .await
-            .unwrap();
+        let res_del_2 = delete(Path(clone_id), State(state.clone())).await.unwrap();
         assert_eq!(res_del_2.0["ok"], true);
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
@@ -360,10 +354,26 @@ mod tests {
         };
 
         assert!(list(State(err_state.clone())).await.is_err());
-        assert!(create(State(err_state.clone()), Json(json!({}))).await.is_err());
+        assert!(
+            create(State(err_state.clone()), Json(json!({})))
+                .await
+                .is_err()
+        );
         assert!(get(Path(board_id), State(err_state.clone())).await.is_err());
-        assert!(update(Path(board_id), State(err_state.clone()), Json(json!({}))).await.is_err());
-        assert!(delete(Path(board_id), State(err_state.clone())).await.is_err());
-        assert!(clone(Path(board_id), State(err_state.clone()), Json(json!({}))).await.is_err());
+        assert!(
+            update(Path(board_id), State(err_state.clone()), Json(json!({})))
+                .await
+                .is_err()
+        );
+        assert!(
+            delete(Path(board_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            clone(Path(board_id), State(err_state.clone()), Json(json!({})))
+                .await
+                .is_err()
+        );
     }
 }

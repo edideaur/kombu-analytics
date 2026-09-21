@@ -167,10 +167,7 @@ mod tests {
     fn test_normalize_ip() {
         assert_eq!(normalize_ip("192.168.1.100"), "192.168.1.100");
         assert_eq!(normalize_ip("192.168.1.100:3000"), "192.168.1.100");
-        assert_eq!(
-            normalize_ip("::ffff:192.0.2.128"),
-            "192.0.2.128"
-        );
+        assert_eq!(normalize_ip("::ffff:192.0.2.128"), "192.0.2.128");
         assert_eq!(normalize_ip("2001:db8::1"), "2001:db8::1");
         assert_eq!(normalize_ip("invalid-ip"), "invalid-ip");
     }
@@ -182,7 +179,10 @@ mod tests {
             Some("1.1.1.1".into())
         );
         assert_eq!(
-            parse_header_ip("forwarded", "proto=https;for=\"198.51.100.17\";by=203.0.113.60"),
+            parse_header_ip(
+                "forwarded",
+                "proto=https;for=\"198.51.100.17\";by=203.0.113.60"
+            ),
             Some("198.51.100.17".into())
         );
         assert_eq!(
@@ -212,10 +212,7 @@ mod tests {
         let ip_custom = resolve_client_ip(headers_custom.to_vec(), Some("my-custom-ip"));
         assert_eq!(ip_custom, Some("10.20.30.40".into()));
 
-        let headers_standard_fallback = [
-            ("cf-connecting-ip", "   "),
-            ("x-real-ip", "5.6.7.8"),
-        ];
+        let headers_standard_fallback = [("cf-connecting-ip", "   "), ("x-real-ip", "5.6.7.8")];
         assert_eq!(
             resolve_client_ip(headers_standard_fallback.to_vec(), None),
             Some("5.6.7.8".into())
@@ -228,8 +225,14 @@ mod tests {
     #[test]
     fn test_is_ip_ignored() {
         assert!(is_ip_ignored("10.0.0.1", Some("10.0.0.0/8, 192.168.1.1")));
-        assert!(is_ip_ignored("192.168.1.1", Some(", , 10.0.0.0/8, 192.168.1.1, , ")));
-        assert!(!is_ip_ignored("192.168.1.2", Some("10.0.0.0/8, 192.168.1.1")));
+        assert!(is_ip_ignored(
+            "192.168.1.1",
+            Some(", , 10.0.0.0/8, 192.168.1.1, , ")
+        ));
+        assert!(!is_ip_ignored(
+            "192.168.1.2",
+            Some("10.0.0.0/8, 192.168.1.1")
+        ));
         assert!(!is_ip_ignored("8.8.8.8", Some("")));
         assert!(!is_ip_ignored("", Some("10.0.0.1")));
     }

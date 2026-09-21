@@ -431,11 +431,17 @@ mod tests {
         assert_eq!(parse_referrer("   ", None), ParsedReferrer::default());
 
         let http_no_slash = parse_referrer("http://example.com", None);
-        assert_eq!(http_no_slash.referrer_domain.as_deref(), Some("example.com"));
+        assert_eq!(
+            http_no_slash.referrer_domain.as_deref(),
+            Some("example.com")
+        );
         assert_eq!(http_no_slash.referrer_path, None);
 
         let https_no_slash = parse_referrer("https://example.com", None);
-        assert_eq!(https_no_slash.referrer_domain.as_deref(), Some("example.com"));
+        assert_eq!(
+            https_no_slash.referrer_domain.as_deref(),
+            Some("example.com")
+        );
         assert_eq!(https_no_slash.referrer_path, None);
 
         let no_scheme = parse_referrer("example.org/path", None);
@@ -443,11 +449,17 @@ mod tests {
         assert_eq!(no_scheme.referrer_path.as_deref(), Some("/path"));
 
         let no_scheme_no_slash = parse_referrer("example.org", None);
-        assert_eq!(no_scheme_no_slash.referrer_domain.as_deref(), Some("example.org"));
+        assert_eq!(
+            no_scheme_no_slash.referrer_domain.as_deref(),
+            Some("example.org")
+        );
         assert_eq!(no_scheme_no_slash.referrer_path, None);
 
         let empty_path_query = parse_referrer("http://example.com/?", None);
-        assert_eq!(empty_path_query.referrer_domain.as_deref(), Some("example.com"));
+        assert_eq!(
+            empty_path_query.referrer_domain.as_deref(),
+            Some("example.com")
+        );
 
         let parsed = parse_referrer("https://www.google.com/search?q=kombu", Some("mysite.com"));
         assert_eq!(parsed.referrer_domain.as_deref(), Some("google.com"));
@@ -486,7 +498,10 @@ mod tests {
         assert_eq!(sanitize_query_string("?token"), "?token=[REDACTED]");
         assert_eq!(sanitize_query_string("?foo"), "?foo");
         assert_eq!(sanitize_url_path("/simple-path"), "/simple-path");
-        assert_eq!(sanitize_url_path("/path?token=secret"), "/path?token=[REDACTED]");
+        assert_eq!(
+            sanitize_url_path("/path?token=secret"),
+            "/path?token=[REDACTED]"
+        );
 
         let p_extra = parse_query_params("?utm_unknown=test&utm_source=&single");
         assert!(p_extra.utm_source.is_none());
@@ -516,7 +531,10 @@ mod tests {
 
         let r_p_empty_direct = parse_referrer("?direct_query", None);
         assert_eq!(r_p_empty_direct.referrer_path.as_deref(), None);
-        assert_eq!(r_p_empty_direct.referrer_query.as_deref(), Some("direct_query"));
+        assert_eq!(
+            r_p_empty_direct.referrer_query.as_deref(),
+            Some("direct_query")
+        );
 
         let r_with_empty_q = parse_referrer("https://example.com/path?", None);
         assert_eq!(r_with_empty_q.referrer_path.as_deref(), Some("/path"));
@@ -526,7 +544,10 @@ mod tests {
         assert_eq!(r_empty_rest.referrer_path.as_deref(), None);
 
         let r_empty_lead_slash = parse_referrer("/somepath", None);
-        assert_eq!(r_empty_lead_slash.referrer_path.as_deref(), Some("/somepath"));
+        assert_eq!(
+            r_empty_lead_slash.referrer_path.as_deref(),
+            Some("/somepath")
+        );
 
         let url = "/checkout?plan=pro&password=mypassword&user_email=alice@example.com";
         let clean_path = truncate_url_path(url);

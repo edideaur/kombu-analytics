@@ -80,11 +80,7 @@ pub async fn export_events(
 
     if format == "json" {
         let json_str = serde_json::to_string(&export_items).unwrap_or_default();
-        let resp = (
-            [(header::CONTENT_TYPE, "application/json")],
-            json_str,
-        )
-            .into_response();
+        let resp = ([(header::CONTENT_TYPE, "application/json")], json_str).into_response();
         return Ok(resp);
     }
 
@@ -147,7 +143,9 @@ pub async fn import_events(
     } else {
         return Err((
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "Payload must be array of events or object with 'events' field" })),
+            Json(
+                json!({ "error": "Payload must be array of events or object with 'events' field" }),
+            ),
         ));
     };
 
@@ -167,7 +165,11 @@ pub async fn import_events(
     };
 
     for item in items {
-        let raw_path = item.url_path.as_deref().or(item.page.as_deref()).unwrap_or("/");
+        let raw_path = item
+            .url_path
+            .as_deref()
+            .or(item.page.as_deref())
+            .unwrap_or("/");
         let clean_path = sanitize_csv_field(raw_path);
         let url_path = kombu_core::url::truncate_url_path(&clean_path);
         let event_type = item.event_type.unwrap_or(1);

@@ -219,7 +219,12 @@ pub async fn get(
     .bind(id)
     .fetch_optional(&state.pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+    })?;
 
     match row {
         Some(w) => Ok(Json(w)),
@@ -230,7 +235,12 @@ pub async fn get(
     }
 }
 
-pub async fn check_website_access(pool: &sqlx::PgPool, user_id: Uuid, is_admin: bool, website_id: Uuid) -> bool {
+pub async fn check_website_access(
+    pool: &sqlx::PgPool,
+    user_id: Uuid,
+    is_admin: bool,
+    website_id: Uuid,
+) -> bool {
     if is_admin {
         return true;
     }
@@ -250,7 +260,12 @@ pub async fn check_website_access(pool: &sqlx::PgPool, user_id: Uuid, is_admin: 
     .unwrap_or(false)
 }
 
-pub async fn check_website_write_access(pool: &sqlx::PgPool, user_id: Uuid, is_admin: bool, website_id: Uuid) -> bool {
+pub async fn check_website_write_access(
+    pool: &sqlx::PgPool,
+    user_id: Uuid,
+    is_admin: bool,
+    website_id: Uuid,
+) -> bool {
     if is_admin {
         return true;
     }
@@ -474,14 +489,15 @@ pub async fn metrics(
     let metric_type = params.r#type.as_deref().unwrap_or("url");
     let limit = params.limit.unwrap_or(10);
 
-    let res = crate::storage::website_metrics(&state.pool, id, start_at, end_at, metric_type, limit)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e.to_string() })),
-            )
-        })?;
+    let res =
+        crate::storage::website_metrics(&state.pool, id, start_at, end_at, metric_type, limit)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e.to_string() })),
+                )
+            })?;
 
     Ok(Json(serde_json::to_value(res).unwrap_or(json!([]))))
 }
@@ -627,7 +643,10 @@ pub async fn reset(
         .execute(&state.pool)
         .await
     {
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))));
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        ));
     }
 
     let _ = sqlx::query(r#"DELETE FROM "session" WHERE website_id = $1"#)
@@ -681,7 +700,12 @@ pub async fn transfer(
 
     get(auth, Path(id), State(state))
         .await
-        .map_err(|(status, _)| (status, Json(json!({ "error": "Failed to fetch transferred website" }))))
+        .map_err(|(status, _)| {
+            (
+                status,
+                Json(json!({ "error": "Failed to fetch transferred website" })),
+            )
+        })
 }
 
 pub async fn entry_exit(
@@ -868,15 +892,24 @@ mod tests {
                 "domain": "team.portal",
                 "teamId": test_team_id_init.to_string(),
             })),
-        ).await;
+        )
+        .await;
         assert!(res_create_team.is_ok());
-        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#).bind(Uuid::parse_str(res_create_team.unwrap().0["id"].as_str().unwrap()).unwrap()).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#).bind(test_team_id_init).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
+            .bind(Uuid::parse_str(res_create_team.unwrap().0["id"].as_str().unwrap()).unwrap())
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#)
+            .bind(test_team_id_init)
+            .execute(&pool)
+            .await;
 
         let res_list_user = list(auth_user.clone(), State(state.clone())).await.unwrap();
         assert!(res_list_user.0["count"].as_i64().unwrap() >= 1);
 
-        let res_list_admin = list(admin_auth.clone(), State(state.clone())).await.unwrap();
+        let res_list_admin = list(admin_auth.clone(), State(state.clone()))
+            .await
+            .unwrap();
         assert!(res_list_admin.0["count"].as_i64().unwrap() >= 1);
 
         let res_get_owner = get(auth_user.clone(), Path(site_id), State(state.clone()))
@@ -884,11 +917,17 @@ mod tests {
             .unwrap();
         assert_eq!(res_get_owner.0["name"], "Acme Portal");
 
-        let res_get_stranger = get(stranger_auth.clone(), Path(site_id), State(state.clone())).await;
+        let res_get_stranger =
+            get(stranger_auth.clone(), Path(site_id), State(state.clone())).await;
         assert!(res_get_stranger.is_err());
         assert_eq!(res_get_stranger.unwrap_err().0, StatusCode::FORBIDDEN);
 
-        let res_get_404 = get(admin_auth.clone(), Path(Uuid::now_v7()), State(state.clone())).await;
+        let res_get_404 = get(
+            admin_auth.clone(),
+            Path(Uuid::now_v7()),
+            State(state.clone()),
+        )
+        .await;
         assert!(res_get_404.is_err());
         assert_eq!(res_get_404.unwrap_err().0, StatusCode::NOT_FOUND);
 
@@ -929,7 +968,13 @@ mod tests {
             compare: None,
         };
 
-        let _ = stats(auth_user.clone(), Path(site_id), Query(qr.clone()), State(state.clone())).await;
+        let _ = stats(
+            auth_user.clone(),
+            Path(site_id),
+            Query(qr.clone()),
+            State(state.clone()),
+        )
+        .await;
 
         let qr_pv = QueryRange {
             start_at: Some((now - Duration::days(7)).timestamp_millis()),
@@ -942,7 +987,13 @@ mod tests {
             timezone: Some("UTC".into()),
             compare: None,
         };
-        let _ = pageviews(auth_user.clone(), Path(site_id), Query(qr_pv.clone()), State(state.clone())).await;
+        let _ = pageviews(
+            auth_user.clone(),
+            Path(site_id),
+            Query(qr_pv.clone()),
+            State(state.clone()),
+        )
+        .await;
 
         let qr_m = QueryRange {
             start_at: Some((now - Duration::days(7)).timestamp_millis()),
@@ -955,8 +1006,20 @@ mod tests {
             timezone: None,
             compare: None,
         };
-        let _ = metrics(auth_user.clone(), Path(site_id), Query(qr_m.clone()), State(state.clone())).await;
-        let _ = metrics_expanded(auth_user.clone(), Path(site_id), Query(qr_m.clone()), State(state.clone())).await;
+        let _ = metrics(
+            auth_user.clone(),
+            Path(site_id),
+            Query(qr_m.clone()),
+            State(state.clone()),
+        )
+        .await;
+        let _ = metrics_expanded(
+            auth_user.clone(),
+            Path(site_id),
+            Query(qr_m.clone()),
+            State(state.clone()),
+        )
+        .await;
 
         let qr_m_no_start = QueryRange {
             start_at: None,
@@ -969,7 +1032,13 @@ mod tests {
             timezone: None,
             compare: None,
         };
-        let _ = metrics_expanded(auth_user.clone(), Path(site_id), Query(qr_m_no_start), State(state.clone())).await;
+        let _ = metrics_expanded(
+            auth_user.clone(),
+            Path(site_id),
+            Query(qr_m_no_start),
+            State(state.clone()),
+        )
+        .await;
 
         let _ = active(auth_user.clone(), Path(site_id), State(state.clone())).await;
 
@@ -986,7 +1055,13 @@ mod tests {
             timezone: None,
             compare: None,
         };
-        let _ = values(auth_user.clone(), Path(site_id), Query(qr_val.clone()), State(state.clone())).await;
+        let _ = values(
+            auth_user.clone(),
+            Path(site_id),
+            Query(qr_val.clone()),
+            State(state.clone()),
+        )
+        .await;
 
         let pa_query = PageAnalyticsQuery {
             start_at: Some((now - Duration::days(7)).timestamp_millis()),
@@ -994,7 +1069,13 @@ mod tests {
             limit: Some(10),
             url_path: None,
         };
-        let _ = entry_exit(auth_user.clone(), Path(site_id), Query(pa_query.clone()), State(state.clone())).await;
+        let _ = entry_exit(
+            auth_user.clone(),
+            Path(site_id),
+            Query(pa_query.clone()),
+            State(state.clone()),
+        )
+        .await;
 
         let pa_query_2 = PageAnalyticsQuery {
             start_at: Some((now - Duration::days(7)).timestamp_millis()),
@@ -1002,7 +1083,13 @@ mod tests {
             limit: Some(10),
             url_path: None,
         };
-        let _ = entry_pages(auth_user.clone(), Path(site_id), Query(pa_query_2.clone()), State(state.clone())).await;
+        let _ = entry_pages(
+            auth_user.clone(),
+            Path(site_id),
+            Query(pa_query_2.clone()),
+            State(state.clone()),
+        )
+        .await;
 
         let pa_query_3 = PageAnalyticsQuery {
             start_at: Some((now - Duration::days(7)).timestamp_millis()),
@@ -1010,7 +1097,13 @@ mod tests {
             limit: Some(10),
             url_path: None,
         };
-        let _ = exit_pages(auth_user.clone(), Path(site_id), Query(pa_query_3.clone()), State(state.clone())).await;
+        let _ = exit_pages(
+            auth_user.clone(),
+            Path(site_id),
+            Query(pa_query_3.clone()),
+            State(state.clone()),
+        )
+        .await;
 
         let pa_query_4 = PageAnalyticsQuery {
             start_at: Some((now - Duration::days(7)).timestamp_millis()),
@@ -1018,28 +1111,149 @@ mod tests {
             limit: Some(10),
             url_path: None,
         };
-        let _ = engagement(auth_user.clone(), Path(site_id), Query(pa_query_4.clone()), State(state.clone())).await;
+        let _ = engagement(
+            auth_user.clone(),
+            Path(site_id),
+            Query(pa_query_4.clone()),
+            State(state.clone()),
+        )
+        .await;
 
         assert!(!check_website_access(&state.pool, stranger_id, false, site_id).await);
         assert!(!check_website_write_access(&state.pool, stranger_id, false, site_id).await);
         assert!(check_website_access(&state.pool, stranger_id, true, site_id).await);
         assert!(check_website_write_access(&state.pool, stranger_id, true, site_id).await);
 
-        assert!(update(stranger_auth.clone(), Path(site_id), State(state.clone()), Json(json!({}))).await.is_err());
-        assert!(delete(stranger_auth.clone(), Path(site_id), State(state.clone())).await.is_err());
-        assert!(stats(stranger_auth.clone(), Path(site_id), Query(qr.clone()), State(state.clone())).await.is_err());
-        assert!(active(stranger_auth.clone(), Path(site_id), State(state.clone())).await.is_err());
-        assert!(daterange(stranger_auth.clone(), Path(site_id), State(state.clone())).await.is_err());
-        assert!(metrics(stranger_auth.clone(), Path(site_id), Query(qr_m.clone()), State(state.clone())).await.is_err());
-        assert!(metrics_expanded(stranger_auth.clone(), Path(site_id), Query(qr_m.clone()), State(state.clone())).await.is_err());
-        assert!(pageviews(stranger_auth.clone(), Path(site_id), Query(qr_pv.clone()), State(state.clone())).await.is_err());
-        assert!(values(stranger_auth.clone(), Path(site_id), Query(qr_val.clone()), State(state.clone())).await.is_err());
-        assert!(reset(stranger_auth.clone(), Path(site_id), State(state.clone())).await.is_err());
-        assert!(transfer(stranger_auth.clone(), Path(site_id), State(state.clone()), Json(json!({}))).await.is_err());
-        assert!(entry_exit(stranger_auth.clone(), Path(site_id), Query(pa_query.clone()), State(state.clone())).await.is_err());
-        assert!(entry_pages(stranger_auth.clone(), Path(site_id), Query(pa_query_2.clone()), State(state.clone())).await.is_err());
-        assert!(exit_pages(stranger_auth.clone(), Path(site_id), Query(pa_query_3.clone()), State(state.clone())).await.is_err());
-        assert!(engagement(stranger_auth.clone(), Path(site_id), Query(pa_query_4.clone()), State(state.clone())).await.is_err());
+        assert!(
+            update(
+                stranger_auth.clone(),
+                Path(site_id),
+                State(state.clone()),
+                Json(json!({}))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete(stranger_auth.clone(), Path(site_id), State(state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            stats(
+                stranger_auth.clone(),
+                Path(site_id),
+                Query(qr.clone()),
+                State(state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            active(stranger_auth.clone(), Path(site_id), State(state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            daterange(stranger_auth.clone(), Path(site_id), State(state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            metrics(
+                stranger_auth.clone(),
+                Path(site_id),
+                Query(qr_m.clone()),
+                State(state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            metrics_expanded(
+                stranger_auth.clone(),
+                Path(site_id),
+                Query(qr_m.clone()),
+                State(state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            pageviews(
+                stranger_auth.clone(),
+                Path(site_id),
+                Query(qr_pv.clone()),
+                State(state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            values(
+                stranger_auth.clone(),
+                Path(site_id),
+                Query(qr_val.clone()),
+                State(state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            reset(stranger_auth.clone(), Path(site_id), State(state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            transfer(
+                stranger_auth.clone(),
+                Path(site_id),
+                State(state.clone()),
+                Json(json!({}))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            entry_exit(
+                stranger_auth.clone(),
+                Path(site_id),
+                Query(pa_query.clone()),
+                State(state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            entry_pages(
+                stranger_auth.clone(),
+                Path(site_id),
+                Query(pa_query_2.clone()),
+                State(state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            exit_pages(
+                stranger_auth.clone(),
+                Path(site_id),
+                Query(pa_query_3.clone()),
+                State(state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            engagement(
+                stranger_auth.clone(),
+                Path(site_id),
+                Query(pa_query_4.clone()),
+                State(state.clone())
+            )
+            .await
+            .is_err()
+        );
 
         let res_reset = reset(auth_user.clone(), Path(site_id), State(state.clone()))
             .await
@@ -1080,14 +1294,18 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(res_transfer_team.0["teamId"], test_team_id.to_string());
-        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#).bind(test_team_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#)
+            .bind(test_team_id)
+            .execute(&pool)
+            .await;
 
         let res_transfer_empty = transfer(
             admin_auth.clone(),
             Path(site_id),
             State(state.clone()),
             Json(json!({})),
-        ).await;
+        )
+        .await;
         assert!(res_transfer_empty.is_ok());
 
         let res_del = delete(admin_auth.clone(), Path(site_id), State(state.clone()))
@@ -1117,23 +1335,149 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(get(admin_auth.clone(), Path(site_id), State(err_state.clone())).await.is_err());
-        assert!(list(auth_user.clone(), State(err_state.clone())).await.is_err());
-        assert!(create(auth_user.clone(), State(err_state.clone()), Json(json!({"name":"Fail","domain":"fail.com"}))).await.is_err());
-        assert!(charts(Query(charts_query), State(err_state.clone())).await.is_ok());
-        assert!(update(admin_auth.clone(), Path(site_id), State(err_state.clone()), Json(json!({"name":"Fail"}))).await.is_err());
-        assert!(delete(admin_auth.clone(), Path(site_id), State(err_state.clone())).await.is_err());
-        assert!(stats(admin_auth.clone(), Path(site_id), Query(qr), State(err_state.clone())).await.is_err());
-        assert!(active(admin_auth.clone(), Path(site_id), State(err_state.clone())).await.is_err());
-        assert!(daterange(admin_auth.clone(), Path(site_id), State(err_state.clone())).await.is_err());
-        assert!(metrics(admin_auth.clone(), Path(site_id), Query(qr_m.clone()), State(err_state.clone())).await.is_err());
-        assert!(metrics_expanded(admin_auth.clone(), Path(site_id), Query(qr_m), State(err_state.clone())).await.is_err());
-        assert!(pageviews(admin_auth.clone(), Path(site_id), Query(qr_pv), State(err_state.clone())).await.is_err());
-        assert!(values(admin_auth.clone(), Path(site_id), Query(qr_val), State(err_state.clone())).await.is_err());
-        assert!(reset(admin_auth.clone(), Path(site_id), State(err_state.clone())).await.is_err());
-        assert!(transfer(admin_auth.clone(), Path(site_id), State(err_state.clone()), Json(json!({"userId": stranger_id.to_string()}))).await.is_err());
-        assert!(transfer(admin_auth.clone(), Path(site_id), State(err_state.clone()), Json(json!({"teamId": stranger_id.to_string()}))).await.is_err());
-        assert!(entry_exit(admin_auth.clone(), Path(site_id), Query(pa_query), State(err_state.clone())).await.is_ok());
-        assert!(engagement(admin_auth.clone(), Path(site_id), Query(pa_query_4), State(err_state.clone())).await.is_ok());
+        assert!(
+            get(admin_auth.clone(), Path(site_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            list(auth_user.clone(), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            create(
+                auth_user.clone(),
+                State(err_state.clone()),
+                Json(json!({"name":"Fail","domain":"fail.com"}))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            charts(Query(charts_query), State(err_state.clone()))
+                .await
+                .is_ok()
+        );
+        assert!(
+            update(
+                admin_auth.clone(),
+                Path(site_id),
+                State(err_state.clone()),
+                Json(json!({"name":"Fail"}))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete(admin_auth.clone(), Path(site_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            stats(
+                admin_auth.clone(),
+                Path(site_id),
+                Query(qr),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            active(admin_auth.clone(), Path(site_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            daterange(admin_auth.clone(), Path(site_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            metrics(
+                admin_auth.clone(),
+                Path(site_id),
+                Query(qr_m.clone()),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            metrics_expanded(
+                admin_auth.clone(),
+                Path(site_id),
+                Query(qr_m),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            pageviews(
+                admin_auth.clone(),
+                Path(site_id),
+                Query(qr_pv),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            values(
+                admin_auth.clone(),
+                Path(site_id),
+                Query(qr_val),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            reset(admin_auth.clone(), Path(site_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            transfer(
+                admin_auth.clone(),
+                Path(site_id),
+                State(err_state.clone()),
+                Json(json!({"userId": stranger_id.to_string()}))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            transfer(
+                admin_auth.clone(),
+                Path(site_id),
+                State(err_state.clone()),
+                Json(json!({"teamId": stranger_id.to_string()}))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            entry_exit(
+                admin_auth.clone(),
+                Path(site_id),
+                Query(pa_query),
+                State(err_state.clone())
+            )
+            .await
+            .is_ok()
+        );
+        assert!(
+            engagement(
+                admin_auth.clone(),
+                Path(site_id),
+                Query(pa_query_4),
+                State(err_state.clone())
+            )
+            .await
+            .is_ok()
+        );
     }
 }

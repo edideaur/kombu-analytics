@@ -466,15 +466,22 @@ async fn test_reports_crud_and_analytics_execution() {
                     .uri("/api/reports/performance")
                     .header(admin_k, &admin_v)
                     .header("content-type", "application/json")
-                    .body(Body::from(json!({
-                        "websiteId": website_id.to_string(),
-                        "parameters": { "metric": metric }
-                    }).to_string()))
+                    .body(Body::from(
+                        json!({
+                            "websiteId": website_id.to_string(),
+                            "parameters": { "metric": metric }
+                        })
+                        .to_string(),
+                    ))
                     .unwrap(),
             )
             .await
             .unwrap();
-        assert_eq!(res_vit.status(), StatusCode::OK, "Failed for performance {metric}");
+        assert_eq!(
+            res_vit.status(),
+            StatusCode::OK,
+            "Failed for performance {metric}"
+        );
     }
 
     let eng_event_id = Uuid::now_v7();
@@ -531,10 +538,13 @@ async fn test_reports_crud_and_analytics_execution() {
                 .uri("/api/reports/engagement")
                 .header(admin_k, &admin_v)
                 .header("content-type", "application/json")
-                .body(Body::from(json!({
-                    "websiteId": website_id.to_string(),
-                    "urlPath": "/home"
-                }).to_string()))
+                .body(Body::from(
+                    json!({
+                        "websiteId": website_id.to_string(),
+                        "urlPath": "/home"
+                    })
+                    .to_string(),
+                ))
                 .unwrap(),
         )
         .await
@@ -542,12 +552,30 @@ async fn test_reports_crud_and_analytics_execution() {
     assert_eq!(res_eng.status(), StatusCode::OK);
 
     for (uri, payload) in [
-        ("/api/reports/journey", json!({ "websiteId": website_id.to_string(), "steps": 3 })),
-        ("/api/reports/goals", json!({ "websiteId": website_id.to_string(), "goals": [{ "name": "Signup", "type": "event", "value": "signup" }] })),
-        ("/api/reports/insights", json!({ "websiteId": website_id.to_string(), "fields": ["browser", "os"] })),
-        ("/api/reports/revenue", json!({ "websiteId": website_id.to_string() })),
-        ("/api/reports/entry-exit", json!({ "websiteId": website_id.to_string() })),
-        ("/api/reports/utm", json!({ "websiteId": website_id.to_string() })),
+        (
+            "/api/reports/journey",
+            json!({ "websiteId": website_id.to_string(), "steps": 3 }),
+        ),
+        (
+            "/api/reports/goals",
+            json!({ "websiteId": website_id.to_string(), "goals": [{ "name": "Signup", "type": "event", "value": "signup" }] }),
+        ),
+        (
+            "/api/reports/insights",
+            json!({ "websiteId": website_id.to_string(), "fields": ["browser", "os"] }),
+        ),
+        (
+            "/api/reports/revenue",
+            json!({ "websiteId": website_id.to_string() }),
+        ),
+        (
+            "/api/reports/entry-exit",
+            json!({ "websiteId": website_id.to_string() }),
+        ),
+        (
+            "/api/reports/utm",
+            json!({ "websiteId": website_id.to_string() }),
+        ),
     ] {
         let res = app
             .clone()

@@ -83,8 +83,8 @@ impl IngestQueue {
                         continue;
                     };
                     for item in &batch {
-                            if !item.session_known_exists {
-                                let _ = sqlx::query(
+                        if !item.session_known_exists {
+                            let _ = sqlx::query(
                                     r#"
                                     INSERT INTO "session" (
                                         session_id, website_id, browser, os, device, screen, language, country, region, city, distinct_id, is_bot, created_at
@@ -107,61 +107,59 @@ impl IngestQueue {
                                 .bind(item.created_at)
                                 .execute(&mut *tx)
                                 .await;
-                            }
+                        }
 
-                            let event_id = Uuid::now_v7();
-                            let url_raw = item.data.url.as_deref().unwrap_or("/");
-                            let (raw_path, raw_query) = match url_raw.split_once('?') {
-                                Some((p, q)) => (p, Some(q)),
-                                None => (url_raw, None),
-                            };
-                            let url_path = truncate_url_path(raw_path);
-                            let url_query = raw_query.map(|q| {
-                                let sanitized = kombu_core::url::sanitize_query_string(q);
-                                truncate_string(&sanitized, 500)
-                            });
+                        let event_id = Uuid::now_v7();
+                        let url_raw = item.data.url.as_deref().unwrap_or("/");
+                        let (raw_path, raw_query) = match url_raw.split_once('?') {
+                            Some((p, q)) => (p, Some(q)),
+                            None => (url_raw, None),
+                        };
+                        let url_path = truncate_url_path(raw_path);
+                        let url_query = raw_query.map(|q| {
+                            let sanitized = kombu_core::url::sanitize_query_string(q);
+                            truncate_string(&sanitized, 500)
+                        });
 
-                            let query_params =
-                                raw_query.map(parse_query_params).unwrap_or_default();
+                        let query_params = raw_query.map(parse_query_params).unwrap_or_default();
 
-                            let parsed_ref = item
-                                .data
-                                .referrer
-                                .as_deref()
-                                .map(|r| parse_referrer(r, item.data.hostname.as_deref()))
-                                .unwrap_or_default();
+                        let parsed_ref = item
+                            .data
+                            .referrer
+                            .as_deref()
+                            .map(|r| parse_referrer(r, item.data.hostname.as_deref()))
+                            .unwrap_or_default();
 
-                            let is_error = item.data.event_type
-                                == Some(kombu_core::constants::EVENT_TYPE_ERROR)
-                                || item.data.message.is_some()
-                                || item.data.stack.is_some();
+                        let is_error = item.data.event_type
+                            == Some(kombu_core::constants::EVENT_TYPE_ERROR)
+                            || item.data.message.is_some()
+                            || item.data.stack.is_some();
 
-                            let event_type = item.data.event_type.unwrap_or_else(|| {
-                                determine_event_type(
-                                    item.data.link.is_some(),
-                                    item.data.pixel.is_some(),
-                                    item.data.lcp.is_some()
-                                        || item.data.inp.is_some()
-                                        || item.data.cls.is_some()
-                                        || item.data.fcp.is_some()
-                                        || item.data.ttfb.is_some(),
-                                    is_error,
-                                    item.data.name.is_some() || item.data.message.is_some(),
-                                )
-                            });
+                        let event_type = item.data.event_type.unwrap_or_else(|| {
+                            determine_event_type(
+                                item.data.link.is_some(),
+                                item.data.pixel.is_some(),
+                                item.data.lcp.is_some()
+                                    || item.data.inp.is_some()
+                                    || item.data.cls.is_some()
+                                    || item.data.fcp.is_some()
+                                    || item.data.ttfb.is_some(),
+                                is_error,
+                                item.data.name.is_some() || item.data.message.is_some(),
+                            )
+                        });
 
-                            let event_title =
-                                item.data.title.as_deref().map(|s| truncate_string(s, 500));
-                            let event_name =
-                                item.data.name.as_deref().or(item.data.message.as_deref());
-                            let tag = item.data.tag.as_deref().map(|s| truncate_string(s, 50));
-                            let hostname = item
-                                .data
-                                .hostname
-                                .as_deref()
-                                .map(|s| truncate_string(s, 100));
+                        let event_title =
+                            item.data.title.as_deref().map(|s| truncate_string(s, 500));
+                        let event_name = item.data.name.as_deref().or(item.data.message.as_deref());
+                        let tag = item.data.tag.as_deref().map(|s| truncate_string(s, 50));
+                        let hostname = item
+                            .data
+                            .hostname
+                            .as_deref()
+                            .map(|s| truncate_string(s, 100));
 
-                            let _ = sqlx::query(
+                        let _ = sqlx::query(
                                 r#"
                                 INSERT INTO "website_event" (
                                     event_id, website_id, session_id, visit_id,
@@ -222,31 +220,31 @@ impl IngestQueue {
                             .execute(&mut *tx)
                             .await;
 
-                            if let Some(event_data_val) = &item.data.data {
-                                let flattened =
-                                    flatten_event_data(event_data_val).unwrap_or_else(|_| {
-                                        let mut out = Vec::new();
-                                        flatten_json(event_data_val, "", &mut out);
-                                        out.truncate(EVENT_DATA_MAX_KEYS);
-                                        out
-                                    });
+                        if let Some(event_data_val) = &item.data.data {
+                            let flattened =
+                                flatten_event_data(event_data_val).unwrap_or_else(|_| {
+                                    let mut out = Vec::new();
+                                    flatten_json(event_data_val, "", &mut out);
+                                    out.truncate(EVENT_DATA_MAX_KEYS);
+                                    out
+                                });
 
-                                for item_data in flattened {
-                                    let number_val = if item_data.data_type == DATA_TYPE_NUMBER {
-                                        item_data.value.parse::<f64>().ok()
-                                    } else {
-                                        None
-                                    };
-                                    let date_val = if item_data.data_type == DATA_TYPE_DATE {
-                                        DateTime::parse_from_rfc3339(&item_data.value)
-                                            .ok()
-                                            .map(|dt| dt.with_timezone(&Utc))
-                                    } else {
-                                        None
-                                    };
-                                    let truncated_key = truncate_string(&item_data.key, 500);
+                            for item_data in flattened {
+                                let number_val = if item_data.data_type == DATA_TYPE_NUMBER {
+                                    item_data.value.parse::<f64>().ok()
+                                } else {
+                                    None
+                                };
+                                let date_val = if item_data.data_type == DATA_TYPE_DATE {
+                                    DateTime::parse_from_rfc3339(&item_data.value)
+                                        .ok()
+                                        .map(|dt| dt.with_timezone(&Utc))
+                                } else {
+                                    None
+                                };
+                                let truncated_key = truncate_string(&item_data.key, 500);
 
-                                    let _ = sqlx::query(
+                                let _ = sqlx::query(
                                         r#"
                                         INSERT INTO "event_data" (
                                             event_data_id, website_id, website_event_id, data_key, string_value, number_value, date_value, data_type, created_at
@@ -264,38 +262,37 @@ impl IngestQueue {
                                     .bind(item.created_at)
                                     .execute(&mut *tx)
                                     .await;
-                                }
+                            }
 
-                                if let Some(map) = event_data_val.as_object() {
-                                    let revenue_val = map
-                                        .get(KEY_REVENUE)
-                                        .or_else(|| map.get(KEY_AMOUNT))
-                                        .and_then(|v| {
-                                            v.as_f64().or_else(|| {
-                                                v.as_str().and_then(|s| s.parse::<f64>().ok())
-                                            })
+                            if let Some(map) = event_data_val.as_object() {
+                                let revenue_val = map
+                                    .get(KEY_REVENUE)
+                                    .or_else(|| map.get(KEY_AMOUNT))
+                                    .and_then(|v| {
+                                        v.as_f64().or_else(|| {
+                                            v.as_str().and_then(|s| s.parse::<f64>().ok())
                                         })
-                                        .filter(|&rev| rev > 0.0);
+                                    })
+                                    .filter(|&rev| rev > 0.0);
 
-                                    if let Some(rev) = revenue_val {
-                                        let rev_id = Uuid::now_v7();
-                                        let ev_name = item
-                                            .data
-                                            .name
-                                            .as_deref()
-                                            .filter(|s| !s.is_empty())
-                                            .unwrap_or(DEFAULT_REVENUE_EVENT);
-                                        let truncated_ev_name = truncate_event_name(ev_name);
-                                        let currency_val = map
-                                            .get(KEY_CURRENCY)
-                                            .and_then(|v| v.as_str())
-                                            .map(str::trim)
-                                            .filter(|s| !s.is_empty())
-                                            .unwrap_or(DEFAULT_CURRENCY);
-                                        let truncated_currency =
-                                            truncate_string(currency_val, 10);
+                                if let Some(rev) = revenue_val {
+                                    let rev_id = Uuid::now_v7();
+                                    let ev_name = item
+                                        .data
+                                        .name
+                                        .as_deref()
+                                        .filter(|s| !s.is_empty())
+                                        .unwrap_or(DEFAULT_REVENUE_EVENT);
+                                    let truncated_ev_name = truncate_event_name(ev_name);
+                                    let currency_val = map
+                                        .get(KEY_CURRENCY)
+                                        .and_then(|v| v.as_str())
+                                        .map(str::trim)
+                                        .filter(|s| !s.is_empty())
+                                        .unwrap_or(DEFAULT_CURRENCY);
+                                    let truncated_currency = truncate_string(currency_val, 10);
 
-                                        let _ = sqlx::query(
+                                    let _ = sqlx::query(
                                             r#"
                                             INSERT INTO "revenue" (
                                                 revenue_id, website_id, session_id, event_id, event_name, currency, revenue, created_at
@@ -312,11 +309,11 @@ impl IngestQueue {
                                         .bind(item.created_at)
                                         .execute(&mut *tx)
                                         .await;
-                                    }
                                 }
                             }
                         }
-                        let _ = tx.commit().await;
+                    }
+                    let _ = tx.commit().await;
                 }
             });
         }

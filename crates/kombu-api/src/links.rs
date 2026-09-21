@@ -32,7 +32,17 @@ pub async fn redirect_slug(
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> Result<Response, (StatusCode, &'static str)> {
-    let row = sqlx::query_as::<_, (Uuid, String, String, Option<String>, Option<String>, Option<String>)>(
+    let row = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        ),
+    >(
         r#"
         SELECT link_id, name, url, og_title, og_description, og_image_url
         FROM "link"
@@ -191,9 +201,15 @@ pub async fn create(
     let name = body["name"].as_str().unwrap_or("Link");
     let url = body["url"].as_str().unwrap_or("https://example.com");
     let slug = body["slug"].as_str().unwrap_or("link");
-    let og_title = body["ogTitle"].as_str().or_else(|| body["og_title"].as_str());
-    let og_description = body["ogDescription"].as_str().or_else(|| body["og_description"].as_str());
-    let og_image_url = body["ogImageUrl"].as_str().or_else(|| body["og_image_url"].as_str());
+    let og_title = body["ogTitle"]
+        .as_str()
+        .or_else(|| body["og_title"].as_str());
+    let og_description = body["ogDescription"]
+        .as_str()
+        .or_else(|| body["og_description"].as_str());
+    let og_image_url = body["ogImageUrl"]
+        .as_str()
+        .or_else(|| body["og_image_url"].as_str());
     let team_id = body["teamId"]
         .as_str()
         .and_then(|s| Uuid::parse_str(s).ok());
@@ -289,9 +305,15 @@ pub async fn update(
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let name = body["name"].as_str();
     let url = body["url"].as_str();
-    let og_title = body["ogTitle"].as_str().or_else(|| body["og_title"].as_str());
-    let og_description = body["ogDescription"].as_str().or_else(|| body["og_description"].as_str());
-    let og_image_url = body["ogImageUrl"].as_str().or_else(|| body["og_image_url"].as_str());
+    let og_title = body["ogTitle"]
+        .as_str()
+        .or_else(|| body["og_title"].as_str());
+    let og_description = body["ogDescription"]
+        .as_str()
+        .or_else(|| body["og_description"].as_str());
+    let og_image_url = body["ogImageUrl"]
+        .as_str()
+        .or_else(|| body["og_image_url"].as_str());
 
     sqlx::query(
         r#"
@@ -375,7 +397,11 @@ mod tests {
         });
         let res_create = create(headers.clone(), State(state.clone()), Json(body_create)).await;
         assert!(res_create.is_ok());
-        let link_id: Uuid = res_create.unwrap().0["id"].as_str().unwrap().parse().unwrap();
+        let link_id: Uuid = res_create.unwrap().0["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
 
         let team_id = Uuid::now_v7();
         let _ = sqlx::query(r#"INSERT INTO "team" (team_id, name, access_code) VALUES ($1, 'Team Link', 'code123')"#)
@@ -395,33 +421,55 @@ mod tests {
         )
         .await;
         assert!(res_create_team.is_ok());
-        let team_link_id: Uuid = res_create_team.unwrap().0["id"].as_str().unwrap().parse().unwrap();
+        let team_link_id: Uuid = res_create_team.unwrap().0["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
         let _ = delete(Path(team_link_id), State(state.clone())).await;
-        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#).bind(team_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#)
+            .bind(team_id)
+            .execute(&pool)
+            .await;
 
         assert!(list(State(state.clone())).await.is_ok());
 
         assert!(get(Path(link_id), State(state.clone())).await.is_ok());
-        assert!(get(Path(Uuid::now_v7()), State(state.clone())).await.is_err());
+        assert!(
+            get(Path(Uuid::now_v7()), State(state.clone()))
+                .await
+                .is_err()
+        );
 
         let body_upd = json!({
             "name": "Updated Link Name",
             "og_title": "Upd OG"
         });
-        assert!(update(Path(link_id), State(state.clone()), Json(body_upd)).await.is_ok());
+        assert!(
+            update(Path(link_id), State(state.clone()), Json(body_upd))
+                .await
+                .is_ok()
+        );
 
         let mut redir_headers = headers.clone();
         redir_headers.insert("referer", "https://referrer.example.com".parse().unwrap());
-        let res_redir = redirect_slug(Path(slug.clone()), redir_headers, State(state.clone())).await;
+        let res_redir =
+            redirect_slug(Path(slug.clone()), redir_headers, State(state.clone())).await;
         assert!(res_redir.is_ok());
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         let mut bot_headers = HeaderMap::new();
         bot_headers.insert("user-agent", "Twitterbot/1.0".parse().unwrap());
-        let res_bot_redir = redirect_slug(Path(slug.clone()), bot_headers, State(state.clone())).await;
+        let res_bot_redir =
+            redirect_slug(Path(slug.clone()), bot_headers, State(state.clone())).await;
         assert!(res_bot_redir.is_ok());
 
-        let res_404_redir = redirect_slug(Path("nonexistent_slug_xyz".into()), headers.clone(), State(state.clone())).await;
+        let res_404_redir = redirect_slug(
+            Path("nonexistent_slug_xyz".into()),
+            headers.clone(),
+            State(state.clone()),
+        )
+        .await;
         assert!(res_404_redir.is_err());
 
         assert!(delete(Path(link_id), State(state.clone())).await.is_ok());
@@ -437,11 +485,31 @@ mod tests {
             app_secret: state.app_secret.clone(),
         };
 
-        assert!(redirect_slug(Path(slug.clone()), headers.clone(), State(err_state.clone())).await.is_err());
+        assert!(
+            redirect_slug(
+                Path(slug.clone()),
+                headers.clone(),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
         assert!(list(State(err_state.clone())).await.is_err());
-        assert!(create(headers.clone(), State(err_state.clone()), Json(json!({}))).await.is_err());
+        assert!(
+            create(headers.clone(), State(err_state.clone()), Json(json!({})))
+                .await
+                .is_err()
+        );
         assert!(get(Path(link_id), State(err_state.clone())).await.is_err());
-        assert!(update(Path(link_id), State(err_state.clone()), Json(json!({}))).await.is_err());
-        assert!(delete(Path(link_id), State(err_state.clone())).await.is_err());
+        assert!(
+            update(Path(link_id), State(err_state.clone()), Json(json!({})))
+                .await
+                .is_err()
+        );
+        assert!(
+            delete(Path(link_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 }

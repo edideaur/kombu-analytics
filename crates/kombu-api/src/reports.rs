@@ -1150,31 +1150,69 @@ mod tests {
             r#type: None,
             search: None,
         };
-        assert!(list(Query(q.clone()), State(err_state.clone())).await.is_err());
-        assert!(list_for_website(Path(web_id), Query(q), State(err_state.clone())).await.is_err());
+        assert!(
+            list(Query(q.clone()), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            list_for_website(Path(web_id), Query(q), State(err_state.clone()))
+                .await
+                .is_err()
+        );
 
-        assert!(create(State(err_state.clone()), Json(json!({
-            "websiteId": web_id.to_string(),
-            "userId": "invalid-uuid",
-            "name": "Test Report"
-        }))).await.is_err());
+        assert!(
+            create(
+                State(err_state.clone()),
+                Json(json!({
+                    "websiteId": web_id.to_string(),
+                    "userId": "invalid-uuid",
+                    "name": "Test Report"
+                }))
+            )
+            .await
+            .is_err()
+        );
 
         assert!(get(Path(rep_id), State(err_state.clone())).await.is_err());
 
-        assert!(update(Path(rep_id), State(err_state.clone()), Json(json!({
-            "name": "Updated Report"
-        }))).await.is_err());
+        assert!(
+            update(
+                Path(rep_id),
+                State(err_state.clone()),
+                Json(json!({
+                    "name": "Updated Report"
+                }))
+            )
+            .await
+            .is_err()
+        );
 
-        assert!(delete(Path(rep_id), State(err_state.clone())).await.is_err());
+        assert!(
+            delete(Path(rep_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
 
-        assert!(run_heatmap(State(err_state.clone()), Json(json!({
-            "websiteId": web_id.to_string(),
-            "urlPath": "/heatmap"
-        }))).await.is_err());
+        assert!(
+            run_heatmap(
+                State(err_state.clone()),
+                Json(json!({
+                    "websiteId": web_id.to_string(),
+                    "urlPath": "/heatmap"
+                }))
+            )
+            .await
+            .is_err()
+        );
 
-        let perf_res = run_performance(State(err_state.clone()), Json(json!({
-            "websiteId": web_id.to_string()
-        }))).await;
+        let perf_res = run_performance(
+            State(err_state.clone()),
+            Json(json!({
+                "websiteId": web_id.to_string()
+            })),
+        )
+        .await;
         assert!(perf_res.is_ok());
     }
 
@@ -1263,4 +1301,3 @@ mod tests {
             .await;
     }
 }
-

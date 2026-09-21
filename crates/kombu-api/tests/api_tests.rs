@@ -1242,7 +1242,9 @@ async fn test_admin_and_user_rbac_enforcement() {
                 .uri("/api/users")
                 .header("content-type", "application/json")
                 .header(u_k, u_v)
-                .body(Body::from(r#"{"username":"hacker","password":"password123"}"#))
+                .body(Body::from(
+                    r#"{"username":"hacker","password":"password123"}"#,
+                ))
                 .unwrap(),
         )
         .await
@@ -1287,7 +1289,10 @@ fn test_password_hashing_and_verification() {
 
     assert!(kombu_api::auth::verify_password(plain, &hashed));
 
-    assert!(!kombu_api::auth::verify_password("WrongPassword123!", &hashed));
+    assert!(!kombu_api::auth::verify_password(
+        "WrongPassword123!",
+        &hashed
+    ));
 
     assert!(!kombu_api::auth::verify_password("kombu", &hashed));
     assert!(!kombu_api::auth::verify_password("umami", &hashed));

@@ -549,9 +549,7 @@ mod tests {
             Some("image/svg+xml")
         );
         assert_eq!(
-            detect_image_content_type(
-                b"<?xml version=\"1.0\"?><svg viewBox='0 0 10 10'></svg>"
-            ),
+            detect_image_content_type(b"<?xml version=\"1.0\"?><svg viewBox='0 0 10 10'></svg>"),
             Some("image/svg+xml")
         );
         assert_eq!(detect_image_content_type(b"random text"), None);
@@ -559,10 +557,7 @@ mod tests {
 
     #[test]
     fn test_parse_image_from_body() {
-        assert_eq!(
-            parse_image_from_body(&json!({})).unwrap(),
-            (None, None)
-        );
+        assert_eq!(parse_image_from_body(&json!({})).unwrap(), (None, None));
         assert_eq!(
             parse_image_from_body(&json!({ "image": null })).unwrap(),
             (None, None)
@@ -580,7 +575,8 @@ mod tests {
         assert_eq!(ct, Some("image/gif".to_string()));
 
         let data_url_no_type = format!("data:;base64,{encoded_gif}");
-        let (data_nt, ct_nt) = parse_image_from_body(&json!({ "image": data_url_no_type })).unwrap();
+        let (data_nt, ct_nt) =
+            parse_image_from_body(&json!({ "image": data_url_no_type })).unwrap();
         assert_eq!(data_nt, Some(PIXEL_GIF.to_vec()));
         assert_eq!(ct_nt, Some("image/gif".to_string()));
 
@@ -664,9 +660,16 @@ mod tests {
         )
         .await;
         assert!(res_team_create.is_ok());
-        let team_px_id: Uuid = res_team_create.unwrap().0["id"].as_str().unwrap().parse().unwrap();
+        let team_px_id: Uuid = res_team_create.unwrap().0["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
         let _ = delete(Path(team_px_id), State(state.clone())).await;
-        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#).bind(team_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "team" WHERE team_id = $1"#)
+            .bind(team_id)
+            .execute(&pool)
+            .await;
 
         let res_list = list(State(state.clone())).await.unwrap();
         assert!(res_list.0["count"].as_i64().unwrap() >= 1);
@@ -759,12 +762,22 @@ mod tests {
         assert!(res_upload_non_img.is_ok());
 
         let mut req_headers = HeaderMap::new();
-        req_headers.insert("user-agent", HeaderValue::from_static("PixelTestBrowser/1.0"));
+        req_headers.insert(
+            "user-agent",
+            HeaderValue::from_static("PixelTestBrowser/1.0"),
+        );
         req_headers.insert("x-forwarded-for", HeaderValue::from_static("1.2.3.4"));
-        req_headers.insert("referer", HeaderValue::from_static("https://pixelref.example.com"));
-        let rendered = render_pixel(Path(new_slug.clone()), req_headers.clone(), State(state.clone()))
-            .await
-            .unwrap();
+        req_headers.insert(
+            "referer",
+            HeaderValue::from_static("https://pixelref.example.com"),
+        );
+        let rendered = render_pixel(
+            Path(new_slug.clone()),
+            req_headers.clone(),
+            State(state.clone()),
+        )
+        .await
+        .unwrap();
         let resp = rendered.into_response();
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -773,15 +786,17 @@ mod tests {
             .unwrap();
         assert_eq!(res_del_img.0["hasCustomImage"], false);
 
-        let rendered_default = render_pixel(Path(new_slug.clone()), req_headers, State(state.clone()))
-            .await
-            .unwrap();
+        let rendered_default =
+            render_pixel(Path(new_slug.clone()), req_headers, State(state.clone()))
+                .await
+                .unwrap();
         let resp_default = rendered_default.into_response();
         assert_eq!(resp_default.status(), StatusCode::OK);
 
-        let rendered_no_headers = render_pixel(Path(new_slug), HeaderMap::new(), State(state.clone()))
-            .await
-            .unwrap();
+        let rendered_no_headers =
+            render_pixel(Path(new_slug), HeaderMap::new(), State(state.clone()))
+                .await
+                .unwrap();
         let resp_no_headers = rendered_no_headers.into_response();
         assert_eq!(resp_no_headers.status(), StatusCode::OK);
 
@@ -797,9 +812,18 @@ mod tests {
         let res_del = delete(Path(pixel_id), State(state.clone())).await.unwrap();
         assert_eq!(res_del.0["ok"], true);
 
-        let _ = sqlx::query(r#"DELETE FROM "website_event" WHERE website_id = $1"#).bind(pixel_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "session" WHERE website_id = $1"#).bind(pixel_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "pixel" WHERE pixel_id = $1"#).bind(pixel_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "website_event" WHERE website_id = $1"#)
+            .bind(pixel_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "session" WHERE website_id = $1"#)
+            .bind(pixel_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "pixel" WHERE pixel_id = $1"#)
+            .bind(pixel_id)
+            .execute(&pool)
+            .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -814,12 +838,53 @@ mod tests {
 
         assert!(list(State(err_state.clone())).await.is_ok());
         assert!(get(Path(pixel_id), State(err_state.clone())).await.is_err());
-        assert!(create(HeaderMap::new(), State(err_state.clone()), Json(json!({ "name": "Fail", "slug": "px-fail" }))).await.is_err());
-        assert!(update(Path(pixel_id), State(err_state.clone()), Json(json!({ "name": "Fail" }))).await.is_err());
+        assert!(
+            create(
+                HeaderMap::new(),
+                State(err_state.clone()),
+                Json(json!({ "name": "Fail", "slug": "px-fail" }))
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            update(
+                Path(pixel_id),
+                State(err_state.clone()),
+                Json(json!({ "name": "Fail" }))
+            )
+            .await
+            .is_err()
+        );
         assert!(update(Path(pixel_id), State(err_state.clone()), Json(json!({ "name": "Fail", "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" }))).await.is_err());
-        assert!(upload_image(Path(pixel_id), HeaderMap::new(), State(err_state.clone()), Bytes::from_static(b"image-bytes")).await.is_err());
-        assert!(delete_image(Path(pixel_id), State(err_state.clone())).await.is_err());
-        assert!(delete(Path(pixel_id), State(err_state.clone())).await.is_err());
-        assert!(render_pixel(Path("any".into()), HeaderMap::new(), State(err_state.clone())).await.is_err());
+        assert!(
+            upload_image(
+                Path(pixel_id),
+                HeaderMap::new(),
+                State(err_state.clone()),
+                Bytes::from_static(b"image-bytes")
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            delete_image(Path(pixel_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            delete(Path(pixel_id), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            render_pixel(
+                Path("any".into()),
+                HeaderMap::new(),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
     }
 }

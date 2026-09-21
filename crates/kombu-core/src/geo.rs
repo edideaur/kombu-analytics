@@ -74,7 +74,8 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/../../maxmind/extracted/GeoLite2-City.mmdb"
         );
-        let reader = maxminddb::Reader::open_readfile(path).expect("maxmind mmdb file should be openable");
+        let reader =
+            maxminddb::Reader::open_readfile(path).expect("maxmind mmdb file should be openable");
         let ip: IpAddr = "8.8.8.8".parse().unwrap();
         let loc = lookup_location(&reader, ip).unwrap();
         assert_eq!(loc.country.as_deref(), Some("US"));

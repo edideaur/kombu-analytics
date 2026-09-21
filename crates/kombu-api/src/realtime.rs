@@ -48,7 +48,11 @@ pub fn build_realtime_payload(rows: &[Value]) -> Value {
 
         let mut regular_event = item.clone();
         if let Some(o) = regular_event.as_object_mut() {
-            let ev_type = if event_name.is_some() { "event" } else { "pageview" };
+            let ev_type = if event_name.is_some() {
+                "event"
+            } else {
+                "pageview"
+            };
             o.insert("__type".into(), json!(ev_type));
         }
         processed_events.push(regular_event);
@@ -60,9 +64,18 @@ pub fn build_realtime_payload(rows: &[Value]) -> Value {
     let events_count = rows.iter().filter(|i| i["eventName"].is_string()).count() as i64;
 
     let mut map = Map::new();
-    map.insert("countries".into(), serde_json::to_value(&countries).unwrap_or_default());
-    map.insert("urls".into(), serde_json::to_value(&urls).unwrap_or_default());
-    map.insert("referrers".into(), serde_json::to_value(&referrers).unwrap_or_default());
+    map.insert(
+        "countries".into(),
+        serde_json::to_value(&countries).unwrap_or_default(),
+    );
+    map.insert(
+        "urls".into(),
+        serde_json::to_value(&urls).unwrap_or_default(),
+    );
+    map.insert(
+        "referrers".into(),
+        serde_json::to_value(&referrers).unwrap_or_default(),
+    );
     map.insert("events".into(), Value::Array(processed_events));
 
     let mut series = Map::new();
@@ -77,7 +90,10 @@ pub fn build_realtime_payload(rows: &[Value]) -> Value {
     totals.insert("countries".into(), Value::Number(countries_count.into()));
     map.insert("totals".into(), Value::Object(totals));
 
-    map.insert("timestamp".into(), Value::Number(chrono::Utc::now().timestamp_millis().into()));
+    map.insert(
+        "timestamp".into(),
+        Value::Number(chrono::Utc::now().timestamp_millis().into()),
+    );
 
     Value::Object(map)
 }
@@ -99,21 +115,18 @@ pub fn create_realtime_stream(
     id: Uuid,
     interval_ms: u64,
 ) -> impl Stream<Item = Result<Event, std::convert::Infallible>> {
-    futures_util::stream::unfold(
-        (state, id, true),
-        move |(state, id, is_first)| async move {
-            if !is_first {
-                tokio::time::sleep(tokio::time::Duration::from_millis(interval_ms)).await;
-            }
-            let rows = kombu_query::get_realtime_data(&state.pool, id, 30)
-                .await
-                .unwrap_or_default();
-            let payload = build_realtime_payload(&rows);
-            let json_str = serde_json::to_string(&payload).unwrap_or_default();
-            let event = Event::default().event("realtime").data(json_str);
-            Some((Ok(event), (state, id, false)))
-        },
-    )
+    futures_util::stream::unfold((state, id, true), move |(state, id, is_first)| async move {
+        if !is_first {
+            tokio::time::sleep(tokio::time::Duration::from_millis(interval_ms)).await;
+        }
+        let rows = kombu_query::get_realtime_data(&state.pool, id, 30)
+            .await
+            .unwrap_or_default();
+        let payload = build_realtime_payload(&rows);
+        let json_str = serde_json::to_string(&payload).unwrap_or_default();
+        let event = Event::default().event("realtime").data(json_str);
+        Some((Ok(event), (state, id, false)))
+    })
 }
 
 pub async fn stream(

@@ -98,7 +98,9 @@ mod tests {
         .await;
         assert!(reg_res.is_ok());
 
-        let parts = get_registered_partitions(&pool, "website_event").await.unwrap();
+        let parts = get_registered_partitions(&pool, "website_event")
+            .await
+            .unwrap();
         assert!(parts.contains(&table_name));
     }
 
@@ -111,12 +113,20 @@ mod tests {
         let start = Utc::now() - chrono::Duration::hours(2);
         let end = Utc::now();
 
-        assert!(refresh_hourly_rollups(&pool, website_id, start, end).await.is_err());
+        assert!(
+            refresh_hourly_rollups(&pool, website_id, start, end)
+                .await
+                .is_err()
+        );
         assert!(
             register_partition(&pool, "t", "website_event", "created_at", start, end)
                 .await
                 .is_err()
         );
-        assert!(get_registered_partitions(&pool, "website_event").await.is_err());
+        assert!(
+            get_registered_partitions(&pool, "website_event")
+                .await
+                .is_err()
+        );
     }
 }

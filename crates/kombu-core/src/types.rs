@@ -177,8 +177,7 @@ impl StorageEngine {
                 return Self::Clickhouse;
             }
         }
-        if get_var("TIMESCALE_ENABLED")
-            .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        if get_var("TIMESCALE_ENABLED").is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         {
             return Self::Timescale;
         }
@@ -244,17 +243,50 @@ mod tests {
         assert_eq!(determine_event_type(false, false, false, false, false), 1);
 
         assert_eq!(StorageEngine::default(), StorageEngine::Postgres);
-        assert_eq!(StorageEngine::parse_str("postgres"), Some(StorageEngine::Postgres));
-        assert_eq!(StorageEngine::parse_str("postgresql"), Some(StorageEngine::Postgres));
-        assert_eq!(StorageEngine::parse_str("default"), Some(StorageEngine::Postgres));
-        assert_eq!(StorageEngine::parse_str("partitioned"), Some(StorageEngine::Partitioned));
-        assert_eq!(StorageEngine::parse_str("postgres-partitioned"), Some(StorageEngine::Partitioned));
-        assert_eq!(StorageEngine::parse_str("partition"), Some(StorageEngine::Partitioned));
-        assert_eq!(StorageEngine::parse_str("timescale"), Some(StorageEngine::Timescale));
-        assert_eq!(StorageEngine::parse_str("timescaledb"), Some(StorageEngine::Timescale));
-        assert_eq!(StorageEngine::parse_str("hypertable"), Some(StorageEngine::Timescale));
-        assert_eq!(StorageEngine::parse_str("clickhouse"), Some(StorageEngine::Clickhouse));
-        assert_eq!(StorageEngine::parse_str("ch"), Some(StorageEngine::Clickhouse));
+        assert_eq!(
+            StorageEngine::parse_str("postgres"),
+            Some(StorageEngine::Postgres)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("postgresql"),
+            Some(StorageEngine::Postgres)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("default"),
+            Some(StorageEngine::Postgres)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("partitioned"),
+            Some(StorageEngine::Partitioned)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("postgres-partitioned"),
+            Some(StorageEngine::Partitioned)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("partition"),
+            Some(StorageEngine::Partitioned)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("timescale"),
+            Some(StorageEngine::Timescale)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("timescaledb"),
+            Some(StorageEngine::Timescale)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("hypertable"),
+            Some(StorageEngine::Timescale)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("clickhouse"),
+            Some(StorageEngine::Clickhouse)
+        );
+        assert_eq!(
+            StorageEngine::parse_str("ch"),
+            Some(StorageEngine::Clickhouse)
+        );
         assert_eq!(StorageEngine::parse_str("unknown"), None);
 
         assert_eq!(StorageEngine::Postgres.as_str(), "postgres");
@@ -268,10 +300,7 @@ mod tests {
         assert_eq!(de, StorageEngine::Timescale);
 
         let detected = StorageEngine::detect_from_env();
-        assert_eq!(
-            StorageEngine::parse_str(detected.as_str()),
-            Some(detected)
-        );
+        assert_eq!(StorageEngine::parse_str(detected.as_str()), Some(detected));
 
         assert_eq!(
             StorageEngine::detect_from_lookup(&lookup(&[("STORAGE_ENGINE", "partitioned")])),
@@ -361,6 +390,9 @@ mod kani_proofs {
     #[kani::proof]
     fn harness_storage_engine_default() {
         let engine = super::StorageEngine::default();
-        kani::assert(engine == super::StorageEngine::Postgres, "default engine is postgres");
+        kani::assert(
+            engine == super::StorageEngine::Postgres,
+            "default engine is postgres",
+        );
     }
 }

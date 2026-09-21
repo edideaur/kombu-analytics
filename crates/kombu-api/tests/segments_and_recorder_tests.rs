@@ -59,7 +59,9 @@ async fn test_segments_and_recorder_lifecycle() {
         .await
         .unwrap();
     assert_eq!(res_site.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_site.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_site.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let site: Value = serde_json::from_slice(&bytes).unwrap();
     let website_id = site["id"].as_str().unwrap();
 
@@ -84,7 +86,9 @@ async fn test_segments_and_recorder_lifecycle() {
         .await
         .unwrap();
     assert_eq!(res_create_seg.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_create_seg.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_create_seg.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let seg: Value = serde_json::from_slice(&bytes).unwrap();
     let segment_id = seg["id"].as_str().unwrap();
 
@@ -143,7 +147,9 @@ async fn test_segments_and_recorder_lifecycle() {
         .await
         .unwrap();
     assert_eq!(res_record.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res_record.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res_record.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let rec: Value = serde_json::from_slice(&bytes).unwrap();
     let replay_id = rec["replayId"].as_str().unwrap();
 
@@ -164,7 +170,9 @@ async fn test_segments_and_recorder_lifecycle() {
         .clone()
         .oneshot(
             Request::builder()
-                .uri(format!("/api/websites/{website_id}/sessions/{session_id}/replays"))
+                .uri(format!(
+                    "/api/websites/{website_id}/sessions/{session_id}/replays"
+                ))
                 .header(admin_k, &admin_v)
                 .body(Body::empty())
                 .unwrap(),

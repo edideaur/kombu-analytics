@@ -226,9 +226,13 @@ mod tests {
 
         let res_existing_reason_zero_screen = classify_bot(None, Some("0x0"), None, false);
         assert!(res_existing_reason_zero_screen.is_bot);
-        assert_eq!(res_existing_reason_zero_screen.reason, Some("missing_user_agent"));
+        assert_eq!(
+            res_existing_reason_zero_screen.reason,
+            Some("missing_user_agent")
+        );
 
-        let res_spam_with_ua_bot = classify_bot(Some("Googlebot/2.1"), None, Some("darodar.com"), false);
+        let res_spam_with_ua_bot =
+            classify_bot(Some("Googlebot/2.1"), None, Some("darodar.com"), false);
         assert!(res_spam_with_ua_bot.is_bot);
         assert_eq!(res_spam_with_ua_bot.reason, Some("referrer_spam"));
 
@@ -236,7 +240,12 @@ mod tests {
         assert!(res_spam_with_none_ua.is_bot);
         assert_eq!(res_spam_with_none_ua.reason, Some("referrer_spam"));
 
-        let res_spam_with_zero_screen = classify_bot(Some("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"), Some("0x0"), Some("darodar.com"), false);
+        let res_spam_with_zero_screen = classify_bot(
+            Some("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"),
+            Some("0x0"),
+            Some("darodar.com"),
+            false,
+        );
         assert!(res_spam_with_zero_screen.is_bot);
         assert_eq!(res_spam_with_zero_screen.reason, Some("referrer_spam"));
 
@@ -269,12 +278,7 @@ mod tests {
         );
         assert_eq!(res_zero_screen.reason, Some("zero_resolution"));
 
-        let res_zero_screen_prior = classify_bot(
-            Some("curl/7.88.1"),
-            Some("0x0"),
-            None,
-            false,
-        );
+        let res_zero_screen_prior = classify_bot(Some("curl/7.88.1"), Some("0x0"), None, false);
         assert!(res_zero_screen_prior.is_bot);
 
         let res = classify_bot(Some("curl/7.88.1"), Some("1920x1080"), None, false);

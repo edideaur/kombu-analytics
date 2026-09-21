@@ -224,28 +224,55 @@ mod tests {
         let website_id = Uuid::now_v7();
         let session_id = Uuid::now_v7();
 
-        assert!(list(Path(website_id), Query(SessionsQuery {
-            start_at: None,
-            end_at: None,
-            page: Some(1),
-            page_size: Some(10),
-            search: Some("chrome".into()),
-        }), State(state.clone())).await.is_ok());
+        assert!(
+            list(
+                Path(website_id),
+                Query(SessionsQuery {
+                    start_at: None,
+                    end_at: None,
+                    page: Some(1),
+                    page_size: Some(10),
+                    search: Some("chrome".into()),
+                }),
+                State(state.clone())
+            )
+            .await
+            .is_ok()
+        );
 
-        assert!(stats(Path(website_id), Query(QueryRange::default()), State(state.clone())).await.is_ok());
+        assert!(
+            stats(
+                Path(website_id),
+                Query(QueryRange::default()),
+                State(state.clone())
+            )
+            .await
+            .is_ok()
+        );
 
-        assert!(weekly(Path(website_id), Query(QueryRange::default()), State(state.clone())).await.is_ok());
+        assert!(
+            weekly(
+                Path(website_id),
+                Query(QueryRange::default()),
+                State(state.clone())
+            )
+            .await
+            .is_ok()
+        );
 
-        assert!(get(Path((website_id, session_id)), State(state.clone())).await.is_err());
+        assert!(
+            get(Path((website_id, session_id)), State(state.clone()))
+                .await
+                .is_err()
+        );
 
-        let _ = sqlx::query(
-            r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#,
-        )
-        .bind(website_id)
-        .bind("Sessions Web")
-        .bind(format!("sess-{website_id}.com"))
-        .execute(&pool)
-        .await;
+        let _ =
+            sqlx::query(r#"INSERT INTO "website" (website_id, name, domain) VALUES ($1, $2, $3)"#)
+                .bind(website_id)
+                .bind("Sessions Web")
+                .bind(format!("sess-{website_id}.com"))
+                .execute(&pool)
+                .await;
 
         let _ = sqlx::query(
             r#"INSERT INTO "session" (session_id, website_id, browser, os, device, screen, language, country, distinct_id)
@@ -267,20 +294,42 @@ mod tests {
         .execute(&pool)
         .await;
 
-        assert!(get(Path((website_id, session_id)), State(state.clone())).await.is_ok());
+        assert!(
+            get(Path((website_id, session_id)), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
-        assert!(activity(Path((website_id, session_id)), Query(SessionsQuery {
-            start_at: None,
-            end_at: None,
-            page: None,
-            page_size: None,
-            search: None,
-        }), State(state.clone())).await.is_ok());
+        assert!(
+            activity(
+                Path((website_id, session_id)),
+                Query(SessionsQuery {
+                    start_at: None,
+                    end_at: None,
+                    page: None,
+                    page_size: None,
+                    search: None,
+                }),
+                State(state.clone())
+            )
+            .await
+            .is_ok()
+        );
 
-        assert!(properties(Path((website_id, session_id)), State(state.clone())).await.is_ok());
+        assert!(
+            properties(Path((website_id, session_id)), State(state.clone()))
+                .await
+                .is_ok()
+        );
 
-        let _ = sqlx::query(r#"DELETE FROM "session" WHERE session_id = $1"#).bind(session_id).execute(&pool).await;
-        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#).bind(website_id).execute(&pool).await;
+        let _ = sqlx::query(r#"DELETE FROM "session" WHERE session_id = $1"#)
+            .bind(session_id)
+            .execute(&pool)
+            .await;
+        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
+            .bind(website_id)
+            .execute(&pool)
+            .await;
 
         let closed_pool = sqlx::PgPool::connect(&db_url).await.unwrap();
         closed_pool.close().await;
@@ -300,11 +349,53 @@ mod tests {
             page_size: None,
             search: None,
         });
-        assert!(list(Path(website_id), dummy_sq, State(err_state.clone())).await.is_err());
-        assert!(stats(Path(website_id), Query(QueryRange::default()), State(err_state.clone())).await.is_err());
-        assert!(weekly(Path(website_id), Query(QueryRange::default()), State(err_state.clone())).await.is_err());
-        assert!(get(Path((website_id, session_id)), State(err_state.clone())).await.is_err());
-        assert!(activity(Path((website_id, session_id)), Query(SessionsQuery { start_at: None, end_at: None, page: None, page_size: None, search: None }), State(err_state.clone())).await.is_err());
-        assert!(properties(Path((website_id, session_id)), State(err_state.clone())).await.is_err());
+        assert!(
+            list(Path(website_id), dummy_sq, State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            stats(
+                Path(website_id),
+                Query(QueryRange::default()),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            weekly(
+                Path(website_id),
+                Query(QueryRange::default()),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            get(Path((website_id, session_id)), State(err_state.clone()))
+                .await
+                .is_err()
+        );
+        assert!(
+            activity(
+                Path((website_id, session_id)),
+                Query(SessionsQuery {
+                    start_at: None,
+                    end_at: None,
+                    page: None,
+                    page_size: None,
+                    search: None
+                }),
+                State(err_state.clone())
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            properties(Path((website_id, session_id)), State(err_state.clone()))
+                .await
+                .is_err()
+        );
     }
 }

@@ -517,7 +517,11 @@ pub fn build_clickhouse_event(
         .title
         .as_deref()
         .map(|s| kombu_core::url::truncate_string(s, 500));
-    let event_name = data.name.as_deref().or(data.message.as_deref()).map(ToString::to_string);
+    let event_name = data
+        .name
+        .as_deref()
+        .or(data.message.as_deref())
+        .map(ToString::to_string);
     let tag = data
         .tag
         .as_deref()
@@ -623,18 +627,8 @@ pub async fn save_session_and_event_with_engine(
     if let (kombu_core::types::StorageEngine::Clickhouse, Some(client)) = (engine, ch_client) {
         let event_id = Uuid::now_v7();
         let ch_event = build_clickhouse_event(
-            source_id,
-            session_id,
-            visit_id,
-            event_id,
-            data,
-            created_at,
-            device,
-            browser,
-            os,
-            country,
-            region,
-            city,
+            source_id, session_id, visit_id, event_id, data, created_at, device, browser, os,
+            country, region, city,
         );
         let _ = save_event_clickhouse(client, &ch_event).await;
     }
@@ -1307,8 +1301,14 @@ mod tests {
         );
 
         let mut map_rich = serde_json::Map::new();
-        map_rich.insert("purchase_date".into(), serde_json::json!("2026-09-19T12:00:00Z"));
-        map_rich.insert("invalid_date".into(), serde_json::json!("2026-09-19Tinvalid-date"));
+        map_rich.insert(
+            "purchase_date".into(),
+            serde_json::json!("2026-09-19T12:00:00Z"),
+        );
+        map_rich.insert(
+            "invalid_date".into(),
+            serde_json::json!("2026-09-19Tinvalid-date"),
+        );
         map_rich.insert("revenue".into(), serde_json::json!(49.99));
         map_rich.insert("currency".into(), serde_json::json!("USD"));
         for i in 0..55 {
@@ -1382,7 +1382,10 @@ mod tests {
         assert!(res_non_obj.is_ok());
 
         let mut map_rev_err = serde_json::Map::new();
-        map_rev_err.insert("revenue".into(), serde_json::json!("123456789012345678901234567890"));
+        map_rev_err.insert(
+            "revenue".into(),
+            serde_json::json!("123456789012345678901234567890"),
+        );
         map_rev_err.insert("currency".into(), serde_json::json!("USD"));
         let mut data_rev_err = data.clone();
         data_rev_err.data = Some(serde_json::Value::Object(map_rev_err));
