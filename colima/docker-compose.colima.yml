@@ -5,8 +5,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     restart: always
-    ports:
-      - "3000:3000"
+    ports: ["3000:3000"]
     environment:
       DATABASE_URL: postgres://kombu:kombu@postgres:5432/kombu
       APP_SECRET: default_secret_change_me_in_production
@@ -29,8 +28,7 @@ services:
       POSTGRES_USER: kombu
       POSTGRES_PASSWORD: kombu
       POSTGRES_DB: kombu
-    volumes:
-      - kombu_colima_pgdata:/var/lib/postgresql/data
+    volumes: ["kombu_colima_pgdata:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kombu -d kombu"]
       interval: 5s

@@ -5,8 +5,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     image: kombu-analytics:latest
-    ports:
-      - "127.0.0.1:3000:3000"
+    ports: ["127.0.0.1:3000:3000"]
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-kombu}:${POSTGRES_PASSWORD:-kombu}@db:5432/${POSTGRES_DB:-kombu}
       APP_SECRET: ${APP_SECRET:-replace-me-with-a-random-string-at-least-32-chars-long!!}
@@ -30,8 +29,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-kombu}
       POSTGRES_USER: ${POSTGRES_USER:-kombu}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kombu}
-    volumes:
-      - kombu-db-data:/var/lib/postgresql/data:Z
+    volumes: ["kombu-db-data:/var/lib/postgresql/data:Z"]
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kombu} -d ${POSTGRES_DB:-kombu}"]

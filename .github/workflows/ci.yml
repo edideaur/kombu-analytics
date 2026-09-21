@@ -8,8 +8,23 @@ permissions:
 on:
   push:
     branches: [ "main", "master" ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE*'
   pull_request:
     branches: [ "main", "master" ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -128,6 +143,7 @@ jobs:
 
   build-linux-binaries:
     name: Build Cross Binary (${{ matrix.target }})
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build-frontend
     runs-on: ubuntu-latest
     strategy:
@@ -191,6 +207,7 @@ jobs:
 
   build-macos-binaries:
     name: Build macOS Binaries (Intel, Apple Silicon, Lipo)
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build-frontend
     runs-on: macos-latest
     steps:
@@ -239,6 +256,7 @@ jobs:
 
   build-windows-binaries:
     name: Build Windows Binary (${{ matrix.target }})
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build-frontend
     runs-on: windows-latest
     strategy:

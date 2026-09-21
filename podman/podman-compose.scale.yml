@@ -5,8 +5,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     image: kombu-analytics:latest
-    ports:
-      - "127.0.0.1:3000:3000"
+    ports: ["127.0.0.1:3000:3000"]
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-kombu}:${POSTGRES_PASSWORD:-kombu}@db:5432/${POSTGRES_DB:-kombu}
       STORAGE_ENGINE: ${STORAGE_ENGINE:-clickhouse}
@@ -33,8 +32,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-kombu}
       POSTGRES_USER: ${POSTGRES_USER:-kombu}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kombu}
-    volumes:
-      - kombu-db-data:/var/lib/postgresql/data:Z
+    volumes: ["kombu-db-data:/var/lib/postgresql/data:Z"]
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kombu} -d ${POSTGRES_DB:-kombu}"]
@@ -45,15 +43,13 @@ services:
   clickhouse:
     container_name: kombu-clickhouse
     image: docker.io/clickhouse/clickhouse-server:24-alpine
-    ports:
-      - "127.0.0.1:8123:8123"
+    ports: ["127.0.0.1:8123:8123"]
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-kombu}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kombu}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
-    volumes:
-      - kombu-clickhouse-data:/var/lib/clickhouse:Z
+    volumes: ["kombu-clickhouse-data:/var/lib/clickhouse:Z"]
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8123/ping || exit 1"]

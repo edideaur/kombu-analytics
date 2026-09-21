@@ -3,8 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    ports:
-      - "3000:3000"
+    ports: ["3000:3000"]
     environment:
       DATABASE_URL: postgresql://kombu:kombu@db:5432/kombu
       APP_SECRET: ${APP_SECRET:-kombu_production_secret_min_32_chars_override_me}
@@ -20,14 +19,12 @@ services:
       retries: 5
   db:
     image: postgres:15-alpine
-    ports:
-      - "5432:5432"
+    ports: ["5432:5432"]
     environment:
       POSTGRES_DB: kombu
       POSTGRES_USER: kombu
       POSTGRES_PASSWORD: kombu
-    volumes:
-      - kombu-db-data:/var/lib/postgresql/data
+    volumes: ["kombu-db-data:/var/lib/postgresql/data"]
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]

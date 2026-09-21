@@ -52,24 +52,103 @@ Kombu was benchmarked against live PostgreSQL instances using multi-worker load 
 
 ---
 
-## Getting Started
+## Installation & Deployment
+
+Complete operational instructions covering all environments are detailed in the **[Deployment Guide](docs/deployment.md)**.
+
+### Quick Install (Linux, BSD, macOS)
+
+Install the latest standalone precompiled binary with embedded Web UI:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/edideaur/kombu-analytics/main/scripts/install.sh | sudo sh
+```
+
+### Precompiled Standalone Binaries (GitHub Releases)
+
+Single static binaries with zero external dependencies are published on every commit across 31 targets:
+
+* **Linux x86_64:** `kombu-x86_64-unknown-linux-musl`, `kombu-x86_64-unknown-linux-gnu`
+* **Linux ARM64:** `kombu-aarch64-unknown-linux-musl`, `kombu-aarch64-unknown-linux-gnu`
+* **Linux ARMv7 / ARMv6 / ARMv5:** `armv7-musleabihf`, `armv7-gnueabihf`, `arm-musleabi`, `armv5te-musleabi`
+* **Linux RISC-V / PowerPC / s390x:** `riscv64gc-gnu`, `powerpc-gnu`, `powerpc64-gnu`, `powerpc64le-gnu`, `s390x-gnu`
+* **BSDs & Unix:** `x86_64-unknown-freebsd`, `i686-unknown-freebsd`, `x86_64-unknown-illumos`
+* **macOS:** `universal-apple-darwin` (Universal lipo), `x86_64-apple-darwin`, `aarch64-apple-darwin`
+* **Windows:** `x86_64-pc-windows-msvc.exe`, `x86_64-pc-windows-gnu.exe`, `aarch64-pc-windows-msvc.exe`
+
+### Container Deployment (Docker & GHCR)
+
+Pull the pre-built multi-architecture image (`linux/amd64`, `linux/arm64`):
+
+```bash
+docker pull ghcr.io/edideaur/kombu-analytics:latest
+```
+
+Launch with Docker Compose:
+
+```bash
+docker compose -f docker/compose.yaml up -d
+```
+
+### macOS and Linux with Colima
+
+```bash
+colima start kombu --config colima/colima.yaml
+./colima/start-colima.sh
+```
+
+### Rootless Podman and Systemd
+
+```bash
+podman-compose -f podman/podman-compose.yml up -d
+./podman/install-systemd-user-service
+systemctl --user enable --now kombu.service
+```
+
+### Init System Services
+
+Pre-configured service definitions and health check watchdogs are ready under `init/`:
+
+* **systemd:** `init/systemd/kombu.service` (Ubuntu, Debian, RHEL, Arch, Fedora)
+* **OpenRC:** `init/openrc/kombu.initd` (Alpine Linux, Gentoo, postmarketOS)
+* **runit:** `init/runit/run` (Void Linux, Artix)
+* **s6:** `init/s6/run` (Alpine s6, container appliances)
+* **SysVinit:** `init/sysvinit/kombu` (Debian legacy, Devuan)
+* **launchd:** `init/launchd/com.kombu.analytics.plist` (macOS native daemon)
+* **FreeBSD rc.d:** `init/freebsd/kombu` (FreeBSD rc supervision)
+* **Watchdogs:** `init/monit/kombu.monitrc`, `init/supervisord/kombu.conf`
+
+See **[Init System Setup](init/README.md)** for step-by-step service installation.
+
+---
+
+## Building from Source
 
 ### Prerequisites
 
 * **Rust 1.85+** (MSRV)
 * **Node.js 20+** & **pnpm 9+**
+* **C Compiler & Make:** gcc or clang and make (for jemalloc allocator)
 * **PostgreSQL 14+**
 
 ### 1. Build the Web UI
 
 ```bash
 cd webui
-pnpm install
+pnpm install --legacy-peer-deps
 pnpm build
 cd ..
 ```
 
-### 2. Configure Environment Variables
+### 2. Build the Standalone Binary
+
+```bash
+cargo build --release --bin kombu
+```
+
+The executable at `target/release/kombu` embeds the complete Vite SPA into binary memory.
+
+### 3. Configure Environment Variables
 
 ```bash
 export DATABASE_URL="postgres://kombu:kombu@localhost:5432/kombu"
@@ -78,18 +157,24 @@ export DATABASE_MAX_CONNECTIONS=80
 export COLLECT_RATE_LIMIT=3000
 ```
 
-### 3. Run Database Migrations
+### 4. Run Database Migrations
 
 ```bash
-cargo run --release -p kombu-cli -- migrate
+./target/release/kombu migrate
 ```
 
-### 4. Import Historical Data from Plausible (Optional)
+### 5. Start Kombu Server
+
+```bash
+./target/release/kombu serve --listen 0.0.0.0:3000
+```
+
+### 6. Import Historical Data from Plausible (Optional)
 
 You can directly import Plausible Analytics CSV exports into any Kombu website:
 
 ```bash
-cargo run --release -p kombu-cli -- import-plausible \
+./target/release/kombu import-plausible \
   --website-id <WEBSITE_UUID> \
   --file /path/to/plausible-export.csv
 ```
@@ -97,49 +182,6 @@ cargo run --release -p kombu-cli -- import-plausible \
 Alternatively, post the JSON/CSV array directly to the HTTP import endpoint:
 ```bash
 POST /api/websites/:websiteId/import
-```
-
-### 5. Start Kombu Server
-
-```bash
-cargo run --release -p kombu-cli -- serve --listen 0.0.0.0:3000
-```
-
----
-
-## Migration Guides
-
-Kombu makes transitioning from other analytics platforms seamless:
-
-* 🔄 **[Umami to Kombu Migration Guide](docs/migration-from-umami.md)**: Drop-in replacement for Umami 3.3.0. Connects directly to existing Umami PostgreSQL databases with zero client-side tracking script changes, preserved passwords, and instant 5x to 10x memory savings.
-* 📊 **[Plausible to Kombu (CSV Export Guide)](docs/migration-from-plausible.md)**: Step-by-step instructions for exporting data from Plausible Cloud or self-hosted instances and importing visitors, pageviews, referrers, and custom goals directly into Kombu via the CLI or REST API.
-
----
-
-## Docker & Compose Deployment
-
-Run the complete Kombu stack (PostgreSQL + Kombu API + Web UI) with Docker Compose:
-
-```bash
-docker compose -f docker/compose.yaml up -d --build
-```
-
-The server will automatically execute database migrations on boot via `docker/entrypoint.sh` and expose:
-* **Web UI & API:** `http://localhost:3000`
-* **Health Check:** `http://localhost:3000/api/health`
-* **Heartbeat:** `http://localhost:3000/api/heartbeat`
-
----
-
-## Podman Deployment (Rootless & Systemd)
-
-Deploy rootlessly with Podman and podman-compose:
-
-```bash
-cp podman/env.sample podman/.env
-podman-compose -f podman/podman-compose.yml up -d
-./podman/install-systemd-user-service
-systemctl --user start kombu.service
 ```
 
 ---

@@ -4,8 +4,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: kombu-server
-    ports:
-      - "3000:3000"
+    ports: ["3000:3000"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-kombu}:${POSTGRES_PASSWORD:-kombu}@db:5432/${POSTGRES_DB:-kombu}
       STORAGE_ENGINE: ${STORAGE_ENGINE:-clickhouse}
@@ -27,14 +26,12 @@ services:
   db:
     image: postgres:16-alpine
     container_name: kombu-postgres
-    ports:
-      - "5432:5432"
+    ports: ["5432:5432"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-kombu}
       POSTGRES_USER: ${POSTGRES_USER:-kombu}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kombu}
-    volumes:
-      - kombu-postgres-data:/var/lib/postgresql/data
+    volumes: ["kombu-postgres-data:/var/lib/postgresql/data"]
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-kombu} -d $${POSTGRES_DB:-kombu}"]
@@ -45,16 +42,13 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:24-alpine
     container_name: kombu-clickhouse
-    ports:
-      - "8123:8123"
-      - "9000:9000"
+    ports: ["8123:8123", "9000:9000"]
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-kombu}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kombu}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
-    volumes:
-      - kombu-clickhouse-data:/var/lib/clickhouse
+    volumes: ["kombu-clickhouse-data:/var/lib/clickhouse"]
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8123/ping || exit 1"]
@@ -66,14 +60,12 @@ services:
     image: timescale/timescaledb:2.15.3-pg16
     container_name: kombu-timescaledb
     profiles: ["timescale"]
-    ports:
-      - "5432:5432"
+    ports: ["5432:5432"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-kombu}
       POSTGRES_USER: ${POSTGRES_USER:-kombu}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kombu}
-    volumes:
-      - kombu-postgres-data:/var/lib/postgresql/data
+    volumes: ["kombu-postgres-data:/var/lib/postgresql/data"]
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-kombu} -d $${POSTGRES_DB:-kombu}"]
