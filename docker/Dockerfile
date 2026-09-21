@@ -5,7 +5,7 @@ RUN npm ci || npm install
 COPY webui ./
 RUN npm run build
 
-FROM rust:1.85-slim AS builder
+FROM rust:1.97.1-slim AS builder
 WORKDIR /app
 COPY Cargo.toml Cargo.lock rust-toolchain.toml deny.toml kani.toml ./
 COPY crates ./crates
