@@ -9,6 +9,7 @@ Comprehensive deployment, containerization, raw binary installation, init system
 * **Container Runtimes:** Docker, Docker Compose, Colima, Podman, nerdctl (containerd), Kubernetes.
 * **Precompiled Standalone Binaries:** Single static binary with embedded Web UI for 31 architectures (Linux, BSD, macOS, Windows).
 * **Init Systems:** systemd, OpenRC, runit, s6, SysVinit, launchd, FreeBSD rc.d, Monit, Supervisord.
+* **Ingress & Networking:** Reverse proxy (Caddy, Nginx), Cloudflare Tunnel, Tailscale, Headscale.
 * **Source Compilation:** Native release builds and multi-architecture cross-compilation.
 
 ---
@@ -487,52 +488,7 @@ server {
 
 ---
 
-## 7. Zero-Trust Exposure and Private Ingress
-
-Deploying Kombu behind CGNAT, home networks, or corporate VPCs without opening firewall ports:
-
-### Cloudflare Tunnel (cloudflared)
-
-Cloudflare Tunnel establishes an outbound-only encrypted connection to Cloudflare edge networks:
-
-```bash
-cloudflared tunnel create kombu-tunnel
-cloudflared tunnel route dns kombu-tunnel analytics.example.com
-cloudflared tunnel run --url http://localhost:3000 kombu-tunnel
-```
-
-Traffic reaches Kombu over Cloudflare Anycast with built-in DDoS defense and automated TLS termination. Set `CLIENT_IP_HEADER=CF-Connecting-IP` in `/etc/kombu/kombu.env` so visitor geographical lookup inspects original client addresses.
-
-### Tailscale (Tailscale Serve & Funnel)
-
-Expose Kombu securely within your private tailnet or to the public internet:
-
-* **Private Tailnet Access (Tailscale Serve):**
-```bash
-tailscale serve --bg 3000
-```
-This serves Kombu directly to authenticated machines on your Tailscale network using MagicDNS.
-
-* **Public Internet Exposure (Tailscale Funnel):**
-```bash
-tailscale funnel --bg 3000
-```
-Routes public HTTPS traffic through Tailscale infrastructure into your local Kombu port without port forwarding.
-
-### Headscale (Self-Hosted Tailscale Control Plane)
-
-For organizations requiring total data sovereignty and private mesh networking without reliance on external coordination servers:
-
-1. Deploy Headscale on a dedicated host.
-2. Join your Kombu host to your Headscale instance:
-```bash
-tailscale up --login-server https://headscale.example.com:443
-```
-3. Access your Kombu instance via internal WireGuard mesh IPs or domain names without public internet exposure.
-
----
-
-## 8. Environment Variables Reference
+## 7. Environment Variables Reference
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
@@ -553,7 +509,7 @@ tailscale up --login-server https://headscale.example.com:443
 
 ---
 
-## 9. Database Maintenance and Backups
+## 8. Database Maintenance and Backups
 
 ### PostgreSQL Backup
 
@@ -573,7 +529,7 @@ pg_restore -U kombu -h localhost -d kombu -v "kombu-backup.dump"
 
 ---
 
-## 10. Health & Monitoring Endpoints
+## 9. Health & Monitoring Endpoints
 
 * `GET /api/health` returns HTTP 200 with database connection status.
 * `GET /api/heartbeat` returns HTTP 200 with process timestamp.

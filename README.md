@@ -103,15 +103,7 @@ Launch the stack matching your scaling tier:
   docker compose -f docker/compose.clickhouse.yaml up -d
   ```
 
-### Private Ingress & Mesh Networking
-
-Expose Kombu without opening inbound firewall ports or static public IPs:
-
-* **Cloudflare Tunnel (`cloudflared`):** Outbound encrypted tunnel through Cloudflare edge with DDoS mitigation.
-* **Tailscale (Serve & Funnel):** Private mesh access across devices or public HTTPS forwarding.
-* **Headscale:** Fully self-hosted open-source control server for sovereign Tailscale mesh networks.
-
-See the **[Deployment Guide](docs/deployment.md)** for complete networking configurations.
+Compatible with Cloudflare Tunnel, Tailscale, and Headscale for zero-open-port deployments.
 
 ### macOS and Linux with Colima
 
