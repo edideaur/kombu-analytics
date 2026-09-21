@@ -125,7 +125,7 @@ jobs:
           path: webui/dist
 
   build-linux-binaries:
-    name: Build Linux Binary (${{ matrix.target }})
+    name: Build Cross Binary (${{ matrix.target }})
     needs: build-frontend
     runs-on: ubuntu-latest
     strategy:
@@ -143,6 +143,14 @@ jobs:
           - target: arm-unknown-linux-gnueabihf
           - target: arm-unknown-linux-musleabihf
           - target: riscv64gc-unknown-linux-gnu
+          - target: riscv64gc-unknown-linux-musl
+          - target: powerpc64le-unknown-linux-gnu
+          - target: s390x-unknown-linux-gnu
+          - target: x86_64-unknown-freebsd
+          - target: i686-unknown-freebsd
+          - target: x86_64-unknown-netbsd
+          - target: x86_64-pc-windows-gnu
+          - target: i686-pc-windows-gnu
     steps:
       - uses: actions/checkout@v4
       - name: Download Frontend Artifact
@@ -168,7 +176,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kombu-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/kombu
+          path: |
+            target/${{ matrix.target }}/release/kombu
+            target/${{ matrix.target }}/release/kombu.exe
           if-no-files-found: error
 
   build-macos-binaries:
