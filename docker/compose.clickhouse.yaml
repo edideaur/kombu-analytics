@@ -1,0 +1,59 @@
+services:
+  kombu:
+    image: ghcr.io/edideaur/kombu-analytics:latest
+    container_name: kombu-server
+    restart: always
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgres://kombu:kombu@postgres:5432/kombu
+      STORAGE_ENGINE: clickhouse
+      CLICKHOUSE_URL: http://default:kombu@clickhouse:8123/kombu
+      APP_SECRET: ${APP_SECRET:-kombu_production_secret_min_32_chars_override_me}
+      DATABASE_MAX_CONNECTIONS: 80
+      COLLECT_RATE_LIMIT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: kombu-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kombu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kombu}
+      POSTGRES_DB: ${POSTGRES_DB:-kombu}
+    volumes: ["clickhouse-pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kombu} -d ${POSTGRES_DB:-kombu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24-alpine
+    container_name: kombu-clickhouse
+    restart: always
+    ports: ["8123:8123", "9000:9000"]
+    environment:
+      CLICKHOUSE_DB: kombu
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: kombu
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes: ["clickhouse-data:/var/lib/clickhouse"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  clickhouse-pgdata:
+  clickhouse-data:

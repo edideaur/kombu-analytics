@@ -76,7 +76,7 @@ Single static binaries with zero external dependencies are published on every co
 * **macOS:** `universal-apple-darwin` (Universal lipo), `x86_64-apple-darwin`, `aarch64-apple-darwin`
 * **Windows:** `x86_64-pc-windows-msvc.exe`, `x86_64-pc-windows-gnu.exe`, `aarch64-pc-windows-msvc.exe`
 
-### Container Deployment (Docker & GHCR)
+### Container Stacks by Storage Backend (Docker & GHCR)
 
 Pull the pre-built multi-architecture image (`linux/amd64`, `linux/arm64`):
 
@@ -84,11 +84,34 @@ Pull the pre-built multi-architecture image (`linux/amd64`, `linux/arm64`):
 docker pull ghcr.io/edideaur/kombu-analytics:latest
 ```
 
-Launch with Docker Compose:
+Launch the stack matching your scaling tier:
 
-```bash
-docker compose -f docker/compose.yaml up -d
-```
+* **Standard PostgreSQL (up to 50M events/yr):**
+  ```bash
+  docker compose -f docker/compose.postgres.yaml up -d
+  ```
+* **PostgreSQL Partitioned + Rollups (50M to 500M events/yr):**
+  ```bash
+  docker compose -f docker/compose.partitioned.yaml up -d
+  ```
+* **TimescaleDB Hypertables:**
+  ```bash
+  docker compose -f docker/compose.timescale.yaml up -d
+  ```
+* **ClickHouse Analytical Store + PostgreSQL Metadata (billions of events):**
+  ```bash
+  docker compose -f docker/compose.clickhouse.yaml up -d
+  ```
+
+### Private Ingress & Mesh Networking
+
+Expose Kombu without opening inbound firewall ports or static public IPs:
+
+* **Cloudflare Tunnel (`cloudflared`):** Outbound encrypted tunnel through Cloudflare edge with DDoS mitigation.
+* **Tailscale (Serve & Funnel):** Private mesh access across devices or public HTTPS forwarding.
+* **Headscale:** Fully self-hosted open-source control server for sovereign Tailscale mesh networks.
+
+See the **[Deployment Guide](docs/deployment.md)** for complete networking configurations.
 
 ### macOS and Linux with Colima
 

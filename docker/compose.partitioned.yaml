@@ -1,0 +1,38 @@
+services:
+  kombu:
+    image: ghcr.io/edideaur/kombu-analytics:latest
+    container_name: kombu-server
+    restart: always
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgres://kombu:kombu@postgres:5432/kombu
+      APP_SECRET: ${APP_SECRET:-kombu_production_secret_min_32_chars_override_me}
+      STORAGE_ENGINE: partitioned
+      DATABASE_MAX_CONNECTIONS: 80
+      COLLECT_RATE_LIMIT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: kombu-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kombu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kombu}
+      POSTGRES_DB: ${POSTGRES_DB:-kombu}
+    volumes: ["postgres-partitioned-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kombu} -d ${POSTGRES_DB:-kombu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-partitioned-data:
