@@ -2,6 +2,8 @@ name: CI
 
 permissions:
   contents: write
+  actions: write
+  packages: write
 
 on:
   push:
@@ -297,6 +299,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - name: Download all binary artifacts
@@ -342,6 +345,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - name: Download Frontend Artifact
