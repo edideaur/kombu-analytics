@@ -33,10 +33,10 @@ export function AdminTeamsTable({
           {(row: any) => <Link href={`/admin/teams/${row.id}`}>{row.name}</Link>}
         </DataColumn>
         <DataColumn id="websites" label={t(labels.members)} width="140px">
-          {(row: any) => row?._count?.members}
+          {(row: any) => row?._count?.members ?? row?.memberCount ?? 0}
         </DataColumn>
         <DataColumn id="members" label={t(labels.websites)} width="140px">
-          {(row: any) => row?._count?.websites}
+          {(row: any) => row?._count?.websites ?? row?.websiteCount ?? 0}
         </DataColumn>
         <DataColumn id="owner" label={t(labels.owner)}>
           {(row: any) => {

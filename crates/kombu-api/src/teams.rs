@@ -26,10 +26,30 @@ pub async fn list(
         sqlx::query_scalar::<_, serde_json::Value>(
             r#"
             SELECT COALESCE(jsonb_agg(t), '[]'::jsonb) FROM (
-                SELECT team_id as id, name, access_code as "accessCode", created_at as "createdAt"
-                FROM "team"
-                WHERE deleted_at IS NULL
-                ORDER BY name ASC
+                SELECT
+                    t.team_id as id,
+                    t.name,
+                    t.access_code as "accessCode",
+                    t.created_at as "createdAt",
+                    jsonb_build_object(
+                        'members', COUNT(DISTINCT tu.user_id)::bigint,
+                        'websites', COUNT(DISTINCT w.website_id)::bigint
+                    ) as "_count",
+                    (
+                        SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                            'role', tu2.role,
+                            'user', jsonb_build_object('id', u2.user_id, 'username', u2.username)
+                        )), '[]'::jsonb)
+                        FROM "team_user" tu2
+                        JOIN "user" u2 ON u2.user_id = tu2.user_id AND u2.deleted_at IS NULL
+                        WHERE tu2.team_id = t.team_id AND tu2.role = 'owner'
+                    ) as "members"
+                FROM "team" t
+                LEFT JOIN "team_user" tu ON tu.team_id = t.team_id
+                LEFT JOIN "website" w ON w.team_id = t.team_id AND w.deleted_at IS NULL
+                WHERE t.deleted_at IS NULL
+                GROUP BY t.team_id, t.name, t.access_code, t.created_at
+                ORDER BY t.name ASC
                 LIMIT 100
             ) t
             "#,
@@ -40,10 +60,30 @@ pub async fn list(
         sqlx::query_scalar::<_, serde_json::Value>(
             r#"
             SELECT COALESCE(jsonb_agg(t), '[]'::jsonb) FROM (
-                SELECT t.team_id as id, t.name, t.access_code as "accessCode", t.created_at as "createdAt"
+                SELECT
+                    t.team_id as id,
+                    t.name,
+                    t.access_code as "accessCode",
+                    t.created_at as "createdAt",
+                    jsonb_build_object(
+                        'members', COUNT(DISTINCT tu_all.user_id)::bigint,
+                        'websites', COUNT(DISTINCT w.website_id)::bigint
+                    ) as "_count",
+                    (
+                        SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                            'role', tu2.role,
+                            'user', jsonb_build_object('id', u2.user_id, 'username', u2.username)
+                        )), '[]'::jsonb)
+                        FROM "team_user" tu2
+                        JOIN "user" u2 ON u2.user_id = tu2.user_id AND u2.deleted_at IS NULL
+                        WHERE tu2.team_id = t.team_id AND tu2.role = 'owner'
+                    ) as "members"
                 FROM "team" t
-                JOIN "team_user" tu ON tu.team_id = t.team_id AND tu.user_id = $1
+                JOIN "team_user" tu_me ON tu_me.team_id = t.team_id AND tu_me.user_id = $1
+                LEFT JOIN "team_user" tu_all ON tu_all.team_id = t.team_id
+                LEFT JOIN "website" w ON w.team_id = t.team_id AND w.deleted_at IS NULL
                 WHERE t.deleted_at IS NULL
+                GROUP BY t.team_id, t.name, t.access_code, t.created_at
                 ORDER BY t.name ASC
                 LIMIT 100
             ) t

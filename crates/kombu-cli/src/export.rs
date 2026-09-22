@@ -106,18 +106,36 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://kombu:kombu@localhost:5432/kombu".to_string());
         if let Ok(pool) = PgPool::connect(&db_url).await {
-            let tmp_out = std::env::temp_dir().join(format!("kombu_test_export_{}.csv", Uuid::now_v7()));
+            let tmp_out =
+                std::env::temp_dir().join(format!("kombu_test_export_{}.csv", Uuid::now_v7()));
             let website_id = Uuid::new_v4();
-            let count = run_export(&pool, website_id, "csv", Some(&tmp_out), None, None, Some(10))
-                .await
-                .expect("export run ok");
+            let count = run_export(
+                &pool,
+                website_id,
+                "csv",
+                Some(&tmp_out),
+                None,
+                None,
+                Some(10),
+            )
+            .await
+            .expect("export run ok");
             assert_eq!(count, 0);
             let _ = std::fs::remove_file(tmp_out);
 
-            let json_out = std::env::temp_dir().join(format!("kombu_test_export_{}.json", Uuid::now_v7()));
-            let count2 = run_export(&pool, website_id, "json", Some(&json_out), None, None, Some(10))
-                .await
-                .expect("export json run ok");
+            let json_out =
+                std::env::temp_dir().join(format!("kombu_test_export_{}.json", Uuid::now_v7()));
+            let count2 = run_export(
+                &pool,
+                website_id,
+                "json",
+                Some(&json_out),
+                None,
+                None,
+                Some(10),
+            )
+            .await
+            .expect("export json run ok");
             assert_eq!(count2, 0);
             let _ = std::fs::remove_file(json_out);
         }

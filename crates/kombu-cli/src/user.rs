@@ -123,9 +123,21 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://kombu:kombu@localhost:5432/kombu".to_string());
         if let Ok(pool) = PgPool::connect(&db_url).await {
-            assert!(create_user(&pool, "", "ValidPass123!", "admin").await.is_err());
-            assert!(create_user(&pool, "validuser", "short", "admin").await.is_err());
-            assert!(create_user(&pool, "validuser", "ValidPass123!", "invalid_role").await.is_err());
+            assert!(
+                create_user(&pool, "", "ValidPass123!", "admin")
+                    .await
+                    .is_err()
+            );
+            assert!(
+                create_user(&pool, "validuser", "short", "admin")
+                    .await
+                    .is_err()
+            );
+            assert!(
+                create_user(&pool, "validuser", "ValidPass123!", "invalid_role")
+                    .await
+                    .is_err()
+            );
         }
     }
 
@@ -140,10 +152,18 @@ mod tests {
                 .expect("user create ok");
 
             let users = list_users(&pool).await.expect("list users ok");
-            assert!(users.iter().any(|u| u.user_id == uid && u.username == uname));
+            assert!(
+                users
+                    .iter()
+                    .any(|u| u.user_id == uid && u.username == uname)
+            );
 
             // Test duplicate username rejection
-            assert!(create_user(&pool, &uname, "StrongP@ss123", "user").await.is_err());
+            assert!(
+                create_user(&pool, &uname, "StrongP@ss123", "user")
+                    .await
+                    .is_err()
+            );
 
             // Test reset password
             assert!(reset_password(&pool, &uname, "short").await.is_err());
@@ -154,7 +174,11 @@ mod tests {
             // Test delete user
             delete_user(&pool, &uname).await.expect("delete user ok");
             assert!(delete_user(&pool, &uname).await.is_err());
-            assert!(reset_password(&pool, &uname, "NewStrongP@ss456").await.is_err());
+            assert!(
+                reset_password(&pool, &uname, "NewStrongP@ss456")
+                    .await
+                    .is_err()
+            );
         }
     }
 }

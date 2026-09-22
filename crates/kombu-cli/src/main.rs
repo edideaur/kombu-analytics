@@ -504,11 +504,19 @@ pub async fn run_cli_internal(
                     .connect(&url)
                     .await?;
                 let users = user::list_users(&pool).await?;
-                println!("{:<36}  {:<20}  {:<10}  {:<25}", "USER ID", "USERNAME", "ROLE", "CREATED AT");
+                println!(
+                    "{:<36}  {:<20}  {:<10}  {:<25}",
+                    "USER ID", "USERNAME", "ROLE", "CREATED AT"
+                );
                 println!("{}", "-".repeat(95));
                 for u in users {
-                    let created = u.created_at.map_or_else(|| "-".to_string(), |c| c.to_rfc3339());
-                    println!("{:<36}  {:<20}  {:<10}  {:<25}", u.user_id, u.username, u.role, created);
+                    let created = u
+                        .created_at
+                        .map_or_else(|| "-".to_string(), |c| c.to_rfc3339());
+                    println!(
+                        "{:<36}  {:<20}  {:<10}  {:<25}",
+                        u.user_id, u.username, u.role, created
+                    );
                 }
             }
             UserCommands::Delete {
@@ -532,12 +540,20 @@ pub async fn run_cli_internal(
                     .connect(&url)
                     .await?;
                 let websites = website::list_websites(&pool).await?;
-                println!("{:<36}  {:<25}  {:<25}  {:<25}", "WEBSITE ID", "NAME", "DOMAIN", "CREATED AT");
+                println!(
+                    "{:<36}  {:<25}  {:<25}  {:<25}",
+                    "WEBSITE ID", "NAME", "DOMAIN", "CREATED AT"
+                );
                 println!("{}", "-".repeat(115));
                 for w in websites {
                     let domain = w.domain.unwrap_or_else(|| "-".to_string());
-                    let created = w.created_at.map_or_else(|| "-".to_string(), |c| c.to_rfc3339());
-                    println!("{:<36}  {:<25}  {:<25}  {:<25}", w.website_id, w.name, domain, created);
+                    let created = w
+                        .created_at
+                        .map_or_else(|| "-".to_string(), |c| c.to_rfc3339());
+                    println!(
+                        "{:<36}  {:<25}  {:<25}  {:<25}",
+                        w.website_id, w.name, domain, created
+                    );
                 }
             }
             WebsiteCommands::Create {
@@ -789,8 +805,17 @@ mod tests {
     #[test]
     fn test_cli_parse_user_and_website_commands() {
         let cli_user = Cli::try_parse_from([
-            "kombu", "user", "create", "--username", "testadmin", "--password", "SecurePassword123!", "--role", "admin"
-        ]).unwrap();
+            "kombu",
+            "user",
+            "create",
+            "--username",
+            "testadmin",
+            "--password",
+            "SecurePassword123!",
+            "--role",
+            "admin",
+        ])
+        .unwrap();
         assert_eq!(
             cli_user.command,
             Commands::User {
@@ -804,8 +829,15 @@ mod tests {
         );
 
         let cli_user_reset = Cli::try_parse_from([
-            "kombu", "user", "reset-password", "--username", "testadmin", "--password", "NewPass12345!"
-        ]).unwrap();
+            "kombu",
+            "user",
+            "reset-password",
+            "--username",
+            "testadmin",
+            "--password",
+            "NewPass12345!",
+        ])
+        .unwrap();
         assert_eq!(
             cli_user_reset.command,
             Commands::User {
@@ -825,9 +857,8 @@ mod tests {
             }
         );
 
-        let cli_user_del = Cli::try_parse_from([
-            "kombu", "user", "delete", "--username", "testadmin"
-        ]).unwrap();
+        let cli_user_del =
+            Cli::try_parse_from(["kombu", "user", "delete", "--username", "testadmin"]).unwrap();
         assert_eq!(
             cli_user_del.command,
             Commands::User {
@@ -839,8 +870,15 @@ mod tests {
         );
 
         let cli_site_create = Cli::try_parse_from([
-            "kombu", "website", "create", "--name", "My Blog", "--domain", "blog.example.com"
-        ]).unwrap();
+            "kombu",
+            "website",
+            "create",
+            "--name",
+            "My Blog",
+            "--domain",
+            "blog.example.com",
+        ])
+        .unwrap();
         assert_eq!(
             cli_site_create.command,
             Commands::Website {

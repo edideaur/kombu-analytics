@@ -39,7 +39,7 @@ export function UsersTable({
           }
         </DataColumn>
         <DataColumn id="websites" label={t(labels.websites)}>
-          {(row: any) => row._count.websites}
+          {(row: any) => row?._count?.websites ?? row?.websiteCount ?? 0}
         </DataColumn>
         <DataColumn
           id="created"

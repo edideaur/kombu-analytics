@@ -29,6 +29,7 @@ pub async fn users(
                 u.username,
                 u.role,
                 u.created_at as "createdAt",
+                jsonb_build_object('websites', COUNT(w.website_id)::bigint) as "_count",
                 COUNT(w.website_id)::bigint as "websiteCount"
             FROM "user" u
             LEFT JOIN "website" w ON w.user_id = u.user_id AND w.deleted_at IS NULL
@@ -70,8 +71,21 @@ pub async fn teams(
                 t.name,
                 t.access_code as "accessCode",
                 t.created_at as "createdAt",
+                jsonb_build_object(
+                    'members', COUNT(DISTINCT tu.user_id)::bigint,
+                    'websites', COUNT(DISTINCT w.website_id)::bigint
+                ) as "_count",
                 COUNT(DISTINCT tu.user_id)::bigint as "memberCount",
-                COUNT(DISTINCT w.website_id)::bigint as "websiteCount"
+                COUNT(DISTINCT w.website_id)::bigint as "websiteCount",
+                (
+                    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                        'role', tu2.role,
+                        'user', jsonb_build_object('id', u2.user_id, 'username', u2.username)
+                    )), '[]'::jsonb)
+                    FROM "team_user" tu2
+                    JOIN "user" u2 ON u2.user_id = tu2.user_id AND u2.deleted_at IS NULL
+                    WHERE tu2.team_id = t.team_id AND tu2.role = 'owner'
+                ) as "members"
             FROM "team" t
             LEFT JOIN "team_user" tu ON tu.team_id = t.team_id
             LEFT JOIN "website" w ON w.team_id = t.team_id AND w.deleted_at IS NULL
@@ -113,9 +127,16 @@ pub async fn websites(
                 w.name,
                 w.domain,
                 w.created_at as "createdAt",
-                u.username as "owner"
+                u.username as "owner",
+                CASE WHEN u.user_id IS NOT NULL THEN
+                    jsonb_build_object('id', u.user_id, 'username', u.username)
+                ELSE NULL END as "user",
+                CASE WHEN t.team_id IS NOT NULL THEN
+                    jsonb_build_object('id', t.team_id, 'name', t.name)
+                ELSE NULL END as "team"
             FROM "website" w
             LEFT JOIN "user" u ON u.user_id = w.user_id
+            LEFT JOIN "team" t ON t.team_id = w.team_id
             WHERE w.deleted_at IS NULL
             ORDER BY w.created_at DESC
             LIMIT 100

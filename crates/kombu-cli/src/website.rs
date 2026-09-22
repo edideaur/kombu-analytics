@@ -123,7 +123,11 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://kombu:kombu@localhost:5432/kombu".to_string());
         if let Ok(pool) = PgPool::connect(&db_url).await {
-            assert!(create_website(&pool, "", Some("example.com"), None).await.is_err());
+            assert!(
+                create_website(&pool, "", Some("example.com"), None)
+                    .await
+                    .is_err()
+            );
         }
     }
 
@@ -141,7 +145,9 @@ mod tests {
             assert!(sites.iter().any(|s| s.website_id == site_id));
 
             reset_website(&pool, site_id).await.expect("reset site ok");
-            delete_website(&pool, site_id).await.expect("delete site ok");
+            delete_website(&pool, site_id)
+                .await
+                .expect("delete site ok");
             assert!(delete_website(&pool, site_id).await.is_err());
             assert!(reset_website(&pool, site_id).await.is_err());
         }

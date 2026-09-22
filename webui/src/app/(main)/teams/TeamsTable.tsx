@@ -20,10 +20,10 @@ export function TeamsTable({ renderLink, ...props }: TeamsTableProps) {
         {(row: any) => row?.members?.find(({ role }) => role === ROLES.teamOwner)?.user?.username}
       </DataColumn>
       <DataColumn id="members" label={t(labels.members)} align="end">
-        {(row: any) => row?._count?.members}
+        {(row: any) => row?._count?.members ?? row?.memberCount ?? 0}
       </DataColumn>
       <DataColumn id="websites" label={t(labels.websites)} align="end">
-        {(row: any) => row?._count?.websites}
+        {(row: any) => row?._count?.websites ?? row?.websiteCount ?? 0}
       </DataColumn>
     </DataTable>
   );

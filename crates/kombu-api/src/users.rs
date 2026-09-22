@@ -18,10 +18,18 @@ pub async fn list(
     let rows = sqlx::query_scalar::<_, serde_json::Value>(
         r#"
         SELECT COALESCE(jsonb_agg(t), '[]'::jsonb) FROM (
-            SELECT user_id as id, username, role, created_at as "createdAt"
-            FROM "user"
-            WHERE deleted_at IS NULL
-            ORDER BY username ASC
+            SELECT
+                u.user_id as id,
+                u.username,
+                u.role,
+                u.created_at as "createdAt",
+                jsonb_build_object('websites', COUNT(w.website_id)::bigint) as "_count",
+                COUNT(w.website_id)::bigint as "websiteCount"
+            FROM "user" u
+            LEFT JOIN "website" w ON w.user_id = u.user_id AND w.deleted_at IS NULL
+            WHERE u.deleted_at IS NULL
+            GROUP BY u.user_id, u.username, u.role, u.created_at
+            ORDER BY u.username ASC
             LIMIT 100
         ) t
         "#,

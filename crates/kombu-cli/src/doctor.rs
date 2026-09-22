@@ -26,15 +26,26 @@ impl DoctorReport {
         println!("============================================================");
         println!(
             " Database Status:        {} (Latency: {} ms)",
-            if self.db_connected { "[OK] CONNECTED" } else { "[FAIL] DISCONNECTED" },
+            if self.db_connected {
+                "[OK] CONNECTED"
+            } else {
+                "[FAIL] DISCONNECTED"
+            },
             self.db_latency_ms
         );
         println!(" PostgreSQL Version:     {}", self.pg_version.trim());
-        println!(" Applied Migrations:     {} migrations", self.migrations_count);
+        println!(
+            " Applied Migrations:     {} migrations",
+            self.migrations_count
+        );
         println!(" Active Storage Engine:  {}", self.storage_engine);
         println!(
             " TimescaleDB Extension:  {}",
-            if self.timescale_installed { "[OK] Installed" } else { "[INFO] Not installed" }
+            if self.timescale_installed {
+                "[OK] Installed"
+            } else {
+                "[INFO] Not installed"
+            }
         );
         if let Some(ref ch) = self.clickhouse_status {
             println!(" ClickHouse Backend:     {ch}");
@@ -117,9 +128,7 @@ pub async fn run_doctor(
         match kombu_db::ClickHouseClient::from_url(ch_url) {
             Ok(client) => match client.ping().await {
                 Ok(true) => Some(format!("[OK] Connected ({})", client.config().endpoint)),
-                Ok(false) => {
-                    Some(format!("[WARN] Ping failed ({})", client.config().endpoint))
-                }
+                Ok(false) => Some(format!("[WARN] Ping failed ({})", client.config().endpoint)),
                 Err(e) => Some(format!("[WARN] Failed to connect: {e}")),
             },
             Err(e) => Some(format!("[WARN] Invalid ClickHouse URL: {e}")),
