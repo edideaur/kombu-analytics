@@ -1426,6 +1426,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "bcrypt",
  "chrono",
  "clap",
  "kombu-api",
@@ -1433,6 +1434,8 @@ dependencies = [
  "kombu-db",
  "kombu-query",
  "sentry",
+ "serde",
+ "serde_json",
  "sha2 0.10.9",
  "sqlx",
  "tikv-jemallocator",

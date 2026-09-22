@@ -184,14 +184,51 @@ export COLLECT_RATE_LIMIT=3000
 ./target/release/kombu serve --listen 0.0.0.0:3000
 ```
 
-### 6. Import Historical Data from Plausible (Optional)
+### 6. Operational CLI Utilities & Diagnostics
 
-You can directly import Plausible Analytics CSV exports into any Kombu website:
-
+#### System Health Check (`doctor`)
+Inspect PostgreSQL connectivity, query latency, schema migrations, GeoIP database status, and live entity counts:
 ```bash
-./target/release/kombu import-plausible \
-  --website-id <WEBSITE_UUID> \
-  --file /path/to/plausible-export.csv
+./target/release/kombu doctor
+```
+
+#### User & Access Management
+Create admins, reset passwords without database surgery, list, and delete users:
+```bash
+# Create new admin user
+./target/release/kombu user create --username admin --password "StrongPassword123!" --role admin
+
+# Reset password
+./target/release/kombu user reset-password --username admin --password "NewPassword123!"
+
+# List all users
+./target/release/kombu user list
+```
+
+#### Website Property Management
+Create, list, reset, and delete tracked websites from the terminal:
+```bash
+# List all websites
+./target/release/kombu website list
+
+# Provision a new website
+./target/release/kombu website create --name "My Site" --domain "mysite.com"
+
+# Reset all collected events/sessions for a site
+./target/release/kombu website reset --website-id <WEBSITE_UUID>
+```
+
+#### Historical Data Import & Export
+Import data from Umami JSON or Plausible CSV, or dump events to CSV/JSON:
+```bash
+# Import Umami JSON export
+./target/release/kombu import-umami --website-id <WEBSITE_UUID> --file /path/to/umami.json
+
+# Import Plausible CSV export
+./target/release/kombu import-plausible --website-id <WEBSITE_UUID> --file /path/to/plausible.csv
+
+# Export events to CSV or JSON
+./target/release/kombu export --website-id <WEBSITE_UUID> --format csv --output export.csv
 ```
 
 Alternatively, post the JSON/CSV array directly to the HTTP import endpoint:

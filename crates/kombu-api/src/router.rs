@@ -421,7 +421,11 @@ pub fn build_router_with_lookup(pool: PgPool, get_env: &dyn Fn(&str) -> Option<S
                 .post(annotations::update)
                 .delete(annotations::delete),
         )
-        .route("/api/health", get(health));
+        .route("/api/health", get(health))
+        .route("/healthz", get(health))
+        .route("/readyz", get(health))
+        .route("/api/version", get(system_version))
+        .route("/api/system/version", get(system_version));
 
     if let Some(tracker_names) = get_env("TRACKER_SCRIPT_NAME") {
         for name in tracker_names
@@ -571,6 +575,13 @@ async fn health() -> &'static str {
     "ok"
 }
 
+async fn system_version() -> axum::Json<serde_json::Value> {
+    axum::Json(serde_json::json!({
+        "version": "3.3.0",
+        "kombuVersion": env!("CARGO_PKG_VERSION")
+    }))
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -581,8 +592,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_route() {
-        let app = Router::new().route("/api/health", get(health));
+        let app = Router::new()
+            .route("/api/health", get(health))
+            .route("/healthz", get(health))
+            .route("/readyz", get(health))
+            .route("/api/version", get(system_version))
+            .route("/api/system/version", get(system_version));
+
         let response = app
+            .clone()
             .oneshot(
                 Request::builder()
                     .uri("/api/health")
@@ -593,6 +611,29 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
+
+        let response_healthz = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/healthz")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response_healthz.status(), StatusCode::OK);
+
+        let response_ver = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/system/version")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response_ver.status(), StatusCode::OK);
     }
 
     #[tokio::test]

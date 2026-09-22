@@ -4,7 +4,12 @@ use clap::{Parser, Subcommand};
 use sha2::{Digest, Sha384};
 use uuid::Uuid;
 
+pub mod doctor;
+pub mod export;
 pub mod plausible;
+pub mod umami;
+pub mod user;
+pub mod website;
 
 #[cfg(not(test))]
 use tracing_subscriber::EnvFilter;
@@ -53,6 +58,106 @@ pub enum Commands {
         website_id: Uuid,
         #[arg(long)]
         file: std::path::PathBuf,
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+    ImportUmami {
+        #[arg(long)]
+        website_id: Uuid,
+        #[arg(long)]
+        file: std::path::PathBuf,
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+    Export {
+        #[arg(long)]
+        website_id: Uuid,
+        #[arg(long, default_value = "csv")]
+        format: String,
+        #[arg(long)]
+        output: Option<std::path::PathBuf>,
+        #[arg(long)]
+        start_at: Option<chrono::DateTime<chrono::Utc>>,
+        #[arg(long)]
+        end_at: Option<chrono::DateTime<chrono::Utc>>,
+        #[arg(long)]
+        limit: Option<i64>,
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+    Doctor {
+        #[arg(long)]
+        database_url: Option<String>,
+        #[arg(long)]
+        clickhouse_url: Option<String>,
+    },
+    User {
+        #[command(subcommand)]
+        action: UserCommands,
+    },
+    Website {
+        #[command(subcommand)]
+        action: WebsiteCommands,
+    },
+}
+
+#[derive(Subcommand, Debug, PartialEq, Eq)]
+pub enum UserCommands {
+    Create {
+        #[arg(long)]
+        username: String,
+        #[arg(long)]
+        password: String,
+        #[arg(long, default_value = "admin")]
+        role: String,
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+    ResetPassword {
+        #[arg(long)]
+        username: String,
+        #[arg(long)]
+        password: String,
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+    List {
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+    Delete {
+        #[arg(long)]
+        username: String,
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug, PartialEq, Eq)]
+pub enum WebsiteCommands {
+    List {
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+    Create {
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        domain: Option<String>,
+        #[arg(long)]
+        user_id: Option<Uuid>,
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+    Delete {
+        #[arg(long)]
+        website_id: Uuid,
+        #[arg(long)]
+        database_url: Option<String>,
+    },
+    Reset {
+        #[arg(long)]
+        website_id: Uuid,
         #[arg(long)]
         database_url: Option<String>,
     },
@@ -299,6 +404,181 @@ pub async fn run_cli_internal(
                 "Successfully imported {count} events from Plausible CSV into website {website_id}"
             );
         }
+        Commands::ImportUmami {
+            website_id,
+            file,
+            database_url,
+        } => {
+            let url = resolve_migrate_url(database_url, env_db_url)?;
+            let pool = match sqlx::postgres::PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_secs(5))
+                .connect(&url)
+                .await
+            {
+                Ok(p) => p,
+                Err(e) => anyhow::bail!("Failed to connect to database: {e}"),
+            };
+            let content = std::fs::read_to_string(&file)?;
+            let count = umami::import_umami_json(&pool, website_id, &content).await?;
+            println!(
+                "Successfully imported {count} events from Umami JSON into website {website_id}"
+            );
+        }
+        Commands::Export {
+            website_id,
+            format,
+            output,
+            start_at,
+            end_at,
+            limit,
+            database_url,
+        } => {
+            let url = resolve_migrate_url(database_url, env_db_url)?;
+            let pool = match sqlx::postgres::PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_secs(5))
+                .connect(&url)
+                .await
+            {
+                Ok(p) => p,
+                Err(e) => anyhow::bail!("Failed to connect to database: {e}"),
+            };
+            export::run_export(
+                &pool,
+                website_id,
+                &format,
+                output.as_deref(),
+                start_at,
+                end_at,
+                limit,
+            )
+            .await?;
+        }
+        Commands::Doctor {
+            database_url,
+            clickhouse_url,
+        } => {
+            let url = resolve_migrate_url(database_url, env_db_url)?;
+            let pool = match sqlx::postgres::PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_secs(5))
+                .connect(&url)
+                .await
+            {
+                Ok(p) => p,
+                Err(e) => anyhow::bail!("Failed to connect to database: {e}"),
+            };
+            let report = doctor::run_doctor(&pool, clickhouse_url.as_deref()).await?;
+            report.print_summary();
+        }
+        Commands::User { action } => match action {
+            UserCommands::Create {
+                username,
+                password,
+                role,
+                database_url,
+            } => {
+                let url = resolve_migrate_url(database_url, env_db_url)?;
+                let pool = sqlx::postgres::PgPoolOptions::new()
+                    .acquire_timeout(std::time::Duration::from_secs(5))
+                    .connect(&url)
+                    .await?;
+                let uid = user::create_user(&pool, &username, &password, &role).await?;
+                println!("Successfully created user '{username}' ({role}) with ID {uid}");
+            }
+            UserCommands::ResetPassword {
+                username,
+                password,
+                database_url,
+            } => {
+                let url = resolve_migrate_url(database_url, env_db_url)?;
+                let pool = sqlx::postgres::PgPoolOptions::new()
+                    .acquire_timeout(std::time::Duration::from_secs(5))
+                    .connect(&url)
+                    .await?;
+                user::reset_password(&pool, &username, &password).await?;
+                println!("Successfully reset password for user '{username}'");
+            }
+            UserCommands::List { database_url } => {
+                let url = resolve_migrate_url(database_url, env_db_url)?;
+                let pool = sqlx::postgres::PgPoolOptions::new()
+                    .acquire_timeout(std::time::Duration::from_secs(5))
+                    .connect(&url)
+                    .await?;
+                let users = user::list_users(&pool).await?;
+                println!("{:<36}  {:<20}  {:<10}  {:<25}", "USER ID", "USERNAME", "ROLE", "CREATED AT");
+                println!("{}", "-".repeat(95));
+                for u in users {
+                    let created = u.created_at.map_or_else(|| "-".to_string(), |c| c.to_rfc3339());
+                    println!("{:<36}  {:<20}  {:<10}  {:<25}", u.user_id, u.username, u.role, created);
+                }
+            }
+            UserCommands::Delete {
+                username,
+                database_url,
+            } => {
+                let url = resolve_migrate_url(database_url, env_db_url)?;
+                let pool = sqlx::postgres::PgPoolOptions::new()
+                    .acquire_timeout(std::time::Duration::from_secs(5))
+                    .connect(&url)
+                    .await?;
+                user::delete_user(&pool, &username).await?;
+                println!("Successfully deleted user '{username}'");
+            }
+        },
+        Commands::Website { action } => match action {
+            WebsiteCommands::List { database_url } => {
+                let url = resolve_migrate_url(database_url, env_db_url)?;
+                let pool = sqlx::postgres::PgPoolOptions::new()
+                    .acquire_timeout(std::time::Duration::from_secs(5))
+                    .connect(&url)
+                    .await?;
+                let websites = website::list_websites(&pool).await?;
+                println!("{:<36}  {:<25}  {:<25}  {:<25}", "WEBSITE ID", "NAME", "DOMAIN", "CREATED AT");
+                println!("{}", "-".repeat(115));
+                for w in websites {
+                    let domain = w.domain.unwrap_or_else(|| "-".to_string());
+                    let created = w.created_at.map_or_else(|| "-".to_string(), |c| c.to_rfc3339());
+                    println!("{:<36}  {:<25}  {:<25}  {:<25}", w.website_id, w.name, domain, created);
+                }
+            }
+            WebsiteCommands::Create {
+                name,
+                domain,
+                user_id,
+                database_url,
+            } => {
+                let url = resolve_migrate_url(database_url, env_db_url)?;
+                let pool = sqlx::postgres::PgPoolOptions::new()
+                    .acquire_timeout(std::time::Duration::from_secs(5))
+                    .connect(&url)
+                    .await?;
+                let wid = website::create_website(&pool, &name, domain.as_deref(), user_id).await?;
+                println!("Successfully created website '{name}' with ID {wid}");
+            }
+            WebsiteCommands::Delete {
+                website_id,
+                database_url,
+            } => {
+                let url = resolve_migrate_url(database_url, env_db_url)?;
+                let pool = sqlx::postgres::PgPoolOptions::new()
+                    .acquire_timeout(std::time::Duration::from_secs(5))
+                    .connect(&url)
+                    .await?;
+                website::delete_website(&pool, website_id).await?;
+                println!("Successfully deleted website {website_id}");
+            }
+            WebsiteCommands::Reset {
+                website_id,
+                database_url,
+            } => {
+                let url = resolve_migrate_url(database_url, env_db_url)?;
+                let pool = sqlx::postgres::PgPoolOptions::new()
+                    .acquire_timeout(std::time::Duration::from_secs(5))
+                    .connect(&url)
+                    .await?;
+                website::reset_website(&pool, website_id).await?;
+                println!("Successfully reset all data for website {website_id}");
+            }
+        },
     }
     Ok(())
 }
@@ -440,6 +720,144 @@ mod tests {
                 website_id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
                 file: std::path::PathBuf::from("test.csv"),
                 database_url: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_import_umami() {
+        let cli = Cli::try_parse_from([
+            "kombu",
+            "import-umami",
+            "--website-id",
+            "550e8400-e29b-41d4-a716-446655440000",
+            "--file",
+            "umami.json",
+        ])
+        .unwrap();
+        assert_eq!(
+            cli.command,
+            Commands::ImportUmami {
+                website_id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+                file: std::path::PathBuf::from("umami.json"),
+                database_url: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_export() {
+        let cli = Cli::try_parse_from([
+            "kombu",
+            "export",
+            "--website-id",
+            "550e8400-e29b-41d4-a716-446655440000",
+            "--format",
+            "json",
+            "--output",
+            "out.json",
+            "--limit",
+            "500",
+        ])
+        .unwrap();
+        assert_eq!(
+            cli.command,
+            Commands::Export {
+                website_id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+                format: "json".to_string(),
+                output: Some(std::path::PathBuf::from("out.json")),
+                start_at: None,
+                end_at: None,
+                limit: Some(500),
+                database_url: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_doctor() {
+        let cli = Cli::try_parse_from(["kombu", "doctor"]).unwrap();
+        assert_eq!(
+            cli.command,
+            Commands::Doctor {
+                database_url: None,
+                clickhouse_url: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_user_and_website_commands() {
+        let cli_user = Cli::try_parse_from([
+            "kombu", "user", "create", "--username", "testadmin", "--password", "SecurePassword123!", "--role", "admin"
+        ]).unwrap();
+        assert_eq!(
+            cli_user.command,
+            Commands::User {
+                action: UserCommands::Create {
+                    username: "testadmin".into(),
+                    password: "SecurePassword123!".into(),
+                    role: "admin".into(),
+                    database_url: None,
+                }
+            }
+        );
+
+        let cli_user_reset = Cli::try_parse_from([
+            "kombu", "user", "reset-password", "--username", "testadmin", "--password", "NewPass12345!"
+        ]).unwrap();
+        assert_eq!(
+            cli_user_reset.command,
+            Commands::User {
+                action: UserCommands::ResetPassword {
+                    username: "testadmin".into(),
+                    password: "NewPass12345!".into(),
+                    database_url: None,
+                }
+            }
+        );
+
+        let cli_user_list = Cli::try_parse_from(["kombu", "user", "list"]).unwrap();
+        assert_eq!(
+            cli_user_list.command,
+            Commands::User {
+                action: UserCommands::List { database_url: None }
+            }
+        );
+
+        let cli_user_del = Cli::try_parse_from([
+            "kombu", "user", "delete", "--username", "testadmin"
+        ]).unwrap();
+        assert_eq!(
+            cli_user_del.command,
+            Commands::User {
+                action: UserCommands::Delete {
+                    username: "testadmin".into(),
+                    database_url: None,
+                }
+            }
+        );
+
+        let cli_site_create = Cli::try_parse_from([
+            "kombu", "website", "create", "--name", "My Blog", "--domain", "blog.example.com"
+        ]).unwrap();
+        assert_eq!(
+            cli_site_create.command,
+            Commands::Website {
+                action: WebsiteCommands::Create {
+                    name: "My Blog".into(),
+                    domain: Some("blog.example.com".into()),
+                    user_id: None,
+                    database_url: None,
+                }
+            }
+        );
+
+        let cli_site_list = Cli::try_parse_from(["kombu", "website", "list"]).unwrap();
+        assert_eq!(
+            cli_site_list.command,
+            Commands::Website {
+                action: WebsiteCommands::List { database_url: None }
             }
         );
     }
@@ -854,6 +1272,252 @@ mod tests {
 
         let guard_default = init_sentry(None);
         assert!(guard_default.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_run_doctor_cmd() {
+        let res = run_cli_with_shutdown(
+            Cli {
+                command: Commands::Doctor {
+                    database_url: Some("postgres://kombu:kombu@localhost:5432/kombu".into()),
+                    clickhouse_url: None,
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res.is_ok());
+
+        let res_bad = run_cli_with_shutdown(
+            Cli {
+                command: Commands::Doctor {
+                    database_url: Some("postgres://127.0.0.1:1/bad".into()),
+                    clickhouse_url: None,
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_bad.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_run_export_cmd() {
+        let website_id = Uuid::now_v7();
+        let out_path = std::env::temp_dir().join(format!("test_export_cli_{}.csv", website_id));
+        let res = run_cli_with_shutdown(
+            Cli {
+                command: Commands::Export {
+                    website_id,
+                    format: "csv".into(),
+                    output: Some(out_path.clone()),
+                    start_at: None,
+                    end_at: None,
+                    limit: Some(10),
+                    database_url: Some("postgres://kombu:kombu@localhost:5432/kombu".into()),
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res.is_ok());
+        let _ = std::fs::remove_file(out_path);
+
+        let res_bad = run_cli_with_shutdown(
+            Cli {
+                command: Commands::Export {
+                    website_id,
+                    format: "json".into(),
+                    output: None,
+                    start_at: None,
+                    end_at: None,
+                    limit: None,
+                    database_url: Some("postgres://127.0.0.1:1/bad".into()),
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_bad.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_run_import_umami_cmd() {
+        let website_id = Uuid::now_v7();
+        let file_path = std::env::temp_dir().join(format!("test_umami_{}.json", website_id));
+        std::fs::write(&file_path, r#"[{"urlPath":"/page","browser":"Safari"}]"#).unwrap();
+
+        let pool = sqlx::PgPool::connect("postgres://kombu:kombu@localhost:5432/kombu")
+            .await
+            .unwrap();
+        sqlx::query(r#"INSERT INTO "website" (website_id, name, domain, created_at) VALUES ($1, 'Umami Cli Test', 'umami.test', now())"#)
+            .bind(website_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let res = run_cli_with_shutdown(
+            Cli {
+                command: Commands::ImportUmami {
+                    website_id,
+                    file: file_path.clone(),
+                    database_url: Some("postgres://kombu:kombu@localhost:5432/kombu".into()),
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res.is_ok());
+        let _ = std::fs::remove_file(file_path);
+
+        let bad_res = run_cli_with_shutdown(
+            Cli {
+                command: Commands::ImportUmami {
+                    website_id,
+                    file: std::path::PathBuf::from("/nonexistent/file.json"),
+                    database_url: Some("postgres://kombu:kombu@localhost:5432/kombu".into()),
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(bad_res.is_err());
+
+        let _ = sqlx::query(r#"DELETE FROM "website" WHERE website_id = $1"#)
+            .bind(website_id)
+            .execute(&pool)
+            .await;
+    }
+
+    #[tokio::test]
+    async fn test_run_user_and_website_cmds() {
+        let uname = format!("cli_user_{}", Uuid::now_v7().simple());
+        let db_url = Some("postgres://kombu:kombu@localhost:5432/kombu".to_string());
+
+        let res_user_create = run_cli_with_shutdown(
+            Cli {
+                command: Commands::User {
+                    action: UserCommands::Create {
+                        username: uname.clone(),
+                        password: "InitialPassword123!".into(),
+                        role: "admin".into(),
+                        database_url: db_url.clone(),
+                    },
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_user_create.is_ok());
+
+        let res_user_list = run_cli_with_shutdown(
+            Cli {
+                command: Commands::User {
+                    action: UserCommands::List {
+                        database_url: db_url.clone(),
+                    },
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_user_list.is_ok());
+
+        let res_user_reset = run_cli_with_shutdown(
+            Cli {
+                command: Commands::User {
+                    action: UserCommands::ResetPassword {
+                        username: uname.clone(),
+                        password: "UpdatedPassword456!".into(),
+                        database_url: db_url.clone(),
+                    },
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_user_reset.is_ok());
+
+        let site_name = format!("CLI Site {}", Uuid::now_v7().simple());
+        let res_site_create = run_cli_with_shutdown(
+            Cli {
+                command: Commands::Website {
+                    action: WebsiteCommands::Create {
+                        name: site_name.clone(),
+                        domain: Some("clitest.org".into()),
+                        user_id: None,
+                        database_url: db_url.clone(),
+                    },
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_site_create.is_ok());
+
+        let res_site_list = run_cli_with_shutdown(
+            Cli {
+                command: Commands::Website {
+                    action: WebsiteCommands::List {
+                        database_url: db_url.clone(),
+                    },
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_site_list.is_ok());
+
+        let pool = sqlx::PgPool::connect("postgres://kombu:kombu@localhost:5432/kombu")
+            .await
+            .unwrap();
+        let wid: Uuid = sqlx::query_scalar("SELECT website_id FROM \"website\" WHERE name = $1")
+            .bind(&site_name)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let res_site_reset = run_cli_with_shutdown(
+            Cli {
+                command: Commands::Website {
+                    action: WebsiteCommands::Reset {
+                        website_id: wid,
+                        database_url: db_url.clone(),
+                    },
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_site_reset.is_ok());
+
+        let res_site_del = run_cli_with_shutdown(
+            Cli {
+                command: Commands::Website {
+                    action: WebsiteCommands::Delete {
+                        website_id: wid,
+                        database_url: db_url.clone(),
+                    },
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_site_del.is_ok());
+
+        let res_user_del = run_cli_with_shutdown(
+            Cli {
+                command: Commands::User {
+                    action: UserCommands::Delete {
+                        username: uname,
+                        database_url: db_url,
+                    },
+                },
+            },
+            Box::pin(std::future::ready(())),
+        )
+        .await;
+        assert!(res_user_del.is_ok());
     }
 }
 

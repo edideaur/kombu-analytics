@@ -122,6 +122,46 @@ If you want to test Kombu in parallel with zero impact on production Umami:
 
 ---
 
+## Migration Method 3: JSON File Import via CLI
+
+If you exported your Umami events/websites as a JSON file, you can import it directly into any Kombu website:
+
+```bash
+kombu import-umami \
+  --website-id <WEBSITE_UUID> \
+  --file /path/to/umami-export.json
+```
+
+Or via the HTTP import endpoint:
+```bash
+POST /api/websites/:websiteId/import
+```
+
+---
+
+## Operational CLI Utilities
+
+Kombu provides full operational tools to manage users, reset passwords, inspect system health, and export data:
+
+```bash
+# Check system diagnostics, latency, and migration status
+kombu doctor
+
+# Create an admin or standard user
+kombu user create --username newadmin --password "StrongPassword123!" --role admin
+
+# Reset a forgotten password without SQL surgery
+kombu user reset-password --username admin --password "NewPassword123!"
+
+# List all registered users
+kombu user list
+
+# Export events to CSV or JSON
+kombu export --website-id <UUID> --format csv --output backup.csv
+```
+
+---
+
 ## Environment Variable Mapping
 
 | Umami Variable | Kombu Equivalent | Description |
